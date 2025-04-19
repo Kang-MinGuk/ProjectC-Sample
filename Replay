@@ -1,0 +1,588 @@
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using SimpleJSON;
+using XGuard;
+
+public class GameReplay
+{
+    public enum ReplayState
+    {
+        Init,
+        Start,
+        Run,
+        Finish
+    }
+
+    Cushion3Match cushio3Match;
+    ReplayState state = ReplayState.Init;
+    bool runReady = false;
+    
+    ElapsedTimer stateTimer = new ElapsedTimer();
+    
+    //----------------------------------------------------------------------------------
+    // Private Function.
+    #region ( Private Function)
+
+    void PlayerInfoSetting()
+    {
+        GameRecordMatchInfo matchInfo = GameRecordManager.Instant.GetMatchInfo();
+
+        CueModel.SetPlayer1Cue(matchInfo.player1CueIndex, matchInfo.player1CueGrade, matchInfo.player1CueLevel, matchInfo.player1CueAdvStat);
+        if (MatchHelper.isClubTournamentMatch())
+            CueModel.SetPlayer2Cue(matchInfo.player2CueIndex, matchInfo.player2CueGrade, matchInfo.player2CueLevel, matchInfo.player2CueAdvStat);
+
+        for (int i = 0; i < 2; i++)
+        {
+            Player p = MatchHelper.GetPlayer(i);
+            PlayerUI playerUI = InGameUI.Instant.GetPlayerUIComponent(i);
+
+            playerUI.ownerPlayer = p;
+            playerUI.SetUserData();
+        }
+    }
+
+    void ChangeState(ReplayState newState)
+    {
+        switch (newState)
+        {
+            case ReplayState.Start:
+                PlayerInfoSetting();
+                break;
+            case ReplayState.Run:
+                {
+                    GameRecordUnit unit = ProcProtocolHead();
+                    while (unit != null)
+                    {
+                        if (unit.xp.ProtocolID == PROTOCOL.RS_PVP_TURN_START)
+                            break;
+                        unit = ProcProtocolHead();
+                    }
+                }
+                break;
+        }
+
+        state = newState;
+    }
+
+    void UpdateInitState(float fElapsed)
+    {
+        ChangeState(ReplayState.Start);
+    }
+
+    void UpdateStartState(float fElapsed)
+    {
+        if (CheckRunReady())
+        {
+            ChangeState(ReplayState.Run);
+        }
+    }
+
+    void UpdateRunState(float fElapsed)
+    {
+        GameRecordUnit unit = GameRecordManager.Instant.GetHeadUnit();
+        if(unit == null || unit.xp == null)
+            return;
+
+        MatchState matchState = MatchHelper.GetMatchState();
+        if (isProcValidProtocol(matchState, unit.xp.ProtocolID))
+        {
+            float currMatchTime = MatchHelper.GetCurrMatchTime();
+            if (currMatchTime >= unit.currMatchTime)
+            {
+                bool isProc = true;
+
+                if (isProc)
+                {
+                    ProcProtocolHead();
+                }
+            }
+        }
+    }
+
+    bool CheckRunReady()
+    {
+        if (state >= ReplayState.Start && runReady)
+            return true;
+
+        return false;
+    }
+
+    bool isProcValidProtocol(MatchState matchState, short portocolID)
+    {
+        switch (portocolID)
+        {
+            case PROTOCOL.RS_PVP_START:
+                {
+                    return true;
+                }
+            case PROTOCOL.RS_PVP_TURN_START:
+                {
+                    if (matchState == MatchState.StartWait || matchState == MatchState.ShotWait ||
+                        matchState == MatchState.ShotResultWait)
+                    {
+                        return true;
+                    }
+                    return false;
+                }
+            case PROTOCOL.RS_PVP_SHOT_B:
+            case PROTOCOL.RS_PVP_CUE_MOVE_B:
+            case PROTOCOL.RS_PVP_CUE_MOVE2_B:
+            case PROTOCOL.RS_PVP_CUE_MOVE3_B:
+            case PROTOCOL.RS_PVP_CUE_SPIN_B:
+            case PROTOCOL.RS_PVP_SHOT_MOVE_B:
+                {
+                    if (matchState == MatchState.ShotWait)
+                        return true;
+                    return false;
+                }
+            case PROTOCOL.RS_PVP_MATCH_SCORE:
+            case PROTOCOL.RS_PVP_SHOT_RESULT_B:
+            case PROTOCOL.RS_PVP_RESULT:
+            case PROTOCOL.RS_PVP_CONNECT:
+            case PROTOCOL.RS_PVP_DISCONNECT:
+            case PROTOCOL.RS_PVP_SECOND_CHANCE:
+            case PROTOCOL.RS_PVP_SEND_MESSAGE:
+            case PROTOCOL.RS_SEND_CHAT:
+            case PROTOCOL.RS_CUE_CHANGE:
+            case PROTOCOL.RS_PVP_LUCKY_GAUGE:
+            case PROTOCOL.RS_PVP_ACTIVE_SKILL:
+            case PROTOCOL.RS_PVP_LUCKY_ITEM:
+            case PROTOCOL.RS_PVP_FOUL_GUARD:
+            case PROTOCOL.RS_PVP_AIM_COUNT:
+                {
+                    return true;
+                }
+        }
+
+        return true;
+    }
+
+    GameRecordUnit ProcProtocolHead()
+    {
+        GameRecordUnit unit = GameRecordManager.Instant.GetHeadUnit();
+        if (unit == null || unit.xp == null)
+            return null;
+
+        switch (unit.xp.ProtocolID)
+        {
+            case PROTOCOL.RS_PVP_START:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_TURN_START:
+                {
+                    rs_pvp_turn_start Protocol = (rs_pvp_turn_start)unit.xp;
+
+                    MatchState matchState = MatchHelper.GetMatchState();
+
+                    if (GlobalGameData.Instant.gameMode == GameMode.Mode8Ball)
+                    {
+                        bool breakCueBall = (Protocol.ballInHand == 2) ? true : false;
+                        bool freeCueBall = (Protocol.ballInHand == 1) ? true : false;
+
+                        BallPoolMatch.Instant.NextTurn(Protocol.userSerial, breakCueBall, freeCueBall, (float)Protocol.turnTime / 1000.0f, (int)Protocol.suddenDeath);
+                    }
+                    else
+                    {
+                        Cushion3Match.Instant.NextTurn(Protocol.userSerial, (float)Protocol.turnTime / 1000.0f, (float)Protocol.remainTime / 1000.0f, Protocol.comboCount, (int)Protocol.suddenDeath);
+                    }
+                }
+                break;
+            case PROTOCOL.RS_PVP_SHOT_B:
+                {
+                    rs_pvp_shot_b Protocol = (rs_pvp_shot_b)unit.xp;
+
+                    // cue shot...
+                    double cueSpeed = BallMathConverter.ConvertByteListToDouble(Protocol.shotParam);
+                    double curAngle = BallMathConverter.ConvertByteListToDouble(Protocol.cueDir);
+                    double spinX = BallMathConverter.ConvertByteListToDouble(Protocol.hitPointX);
+                    double spinY = BallMathConverter.ConvertByteListToDouble(Protocol.hitPointY);
+                    double cuePower = BallMathConverter.ConvertByteListToDouble(Protocol.cuePower);
+                    Vect lineParam = BallMathConverter.ConvertByteListToVect(Protocol.lineParam);
+                    double cutShotValue = BallMathConverter.ConvertByteListToDouble(Protocol.additionalParam1);
+                    double masseAngle = BallMathConverter.ConvertByteListToDouble(Protocol.additionalParam2);
+
+                    CueController.Instant.NetSyncFreeBallPosFinish();
+                    CueController.Instant.CueShot();
+
+                    if (Protocol.cueBallPosX != null && Protocol.cueBallPosY != null)
+                    {
+                        double cueBallPosX = BallMathConverter.ConvertByteListToDouble(Protocol.cueBallPosX);
+                        double cueBallPosY = BallMathConverter.ConvertByteListToDouble(Protocol.cueBallPosY);
+
+                        GameManager.Instant.SetCueBallPos(cueBallPosX, cueBallPosY);
+                    }
+                    
+                    GameManager.Instant.CueAngle(curAngle);
+                    GameManager.Instant.SetSpinStrength(spinX, spinY);
+                    GameManager.Instant.SetCuePower(cuePower);
+                    Vect targetLineParam = new Vect(lineParam.x, lineParam.y, lineParam.z);
+                    GameManager.Instant.SetWhiteBallFCV(targetLineParam);
+                    GameManager.Instant.SetCutShotValue(cutShotValue);
+                    GameManager.Instant.CueMasseAngle(masseAngle);
+
+                    if (GlobalGameData.Instant.gameMode == GameMode.Mode8Ball)
+                    {
+                        bool isBreakBall = BallPoolMatch.Instant.isBreakCueBall;
+                        GameManager.Instant.QueueShot8Ball(isBreakBall, cueSpeed);
+                    }
+                    else
+                    {
+                        GameManager.Instant.QueueShot3Cushion(cueSpeed);
+                    }
+
+                    MatchHelper.ChangeMatchState(MatchState.Shot);
+                }
+                break;
+            case PROTOCOL.RS_PVP_CUE_MOVE_B:
+                {
+                    rs_pvp_cue_move_b Protocol = (rs_pvp_cue_move_b)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    double cueAngle = BallMathConverter.ConvertByteListToDouble(Protocol.cueDir);
+
+                    CueController.Instant.NetSyncCueAngle(cueAngle);
+                }
+                break;
+            case PROTOCOL.RS_PVP_CUE_MOVE2_B:
+                {
+                    rs_pvp_cue_move2_b Protocol = (rs_pvp_cue_move2_b)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    double cutShotValue = BallMathConverter.ConvertByteListToDouble(Protocol.cueDir);
+
+                    GameManager.Instant.SetCutShotValue(cutShotValue);
+                    GameManager.Instant.SimulationBallsFromSaveData();
+                }
+                break;
+            case PROTOCOL.RS_PVP_CUE_MOVE3_B:
+                {
+                    rs_pvp_cue_move3_b Protocol = (rs_pvp_cue_move3_b)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    double masseAngle = BallMathConverter.ConvertByteListToDouble(Protocol.cueDir);
+
+                    GameManager.Instant.CueMasseAngle(masseAngle);
+                    GameManager.Instant.SimulationBallsFromSaveData();
+                }
+                break;
+            case PROTOCOL.RS_PVP_CUE_SPIN_B:
+                {
+                    rs_pvp_cue_spin_b Protocol = (rs_pvp_cue_spin_b)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    double spinStrengthX = BallMathConverter.ConvertByteListToDouble(Protocol.hitPointX);
+                    double spinStrengthY = BallMathConverter.ConvertByteListToDouble(Protocol.hitPointY);
+                    double spinUIX = BallMathConverter.ConvertByteListToDouble(Protocol.cuePosX);
+                    double spinUIY = BallMathConverter.ConvertByteListToDouble(Protocol.cuePosY);
+
+                    GameManager.Instant.SetSpinStrength(spinStrengthX, spinStrengthY);
+                    GameManager.Instant.SetSpinUIValue(spinUIX, spinUIY);
+                    BallSpinButtonUI.Instant.SetSpin(spinStrengthX, spinStrengthY);
+                }
+                break;
+            case PROTOCOL.RS_PVP_SHOT_MOVE_B:
+                {
+                    rs_pvp_shot_move_b Protocol = (rs_pvp_shot_move_b)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    double cuePower = BallMathConverter.ConvertByteListToDouble(Protocol.shotMove);
+                    CueController.Instant.NetSyncCuePower(cuePower);
+                }
+                break;
+            case PROTOCOL.RS_PVP_MATCH_SCORE:
+                {
+                    rs_pvp_match_score Protocol = (rs_pvp_match_score)unit.xp;
+
+                    // 클럽 대전때문에 보정한다.
+                    int adjustScore = Protocol.score;
+
+                    if (MatchHelper.GetMatchState() == MatchState.ShotWait)
+                    {
+                        Player p = MatchHelper.GetPlayerFromSerialID(Protocol.userSerial);
+                        int diffScore = adjustScore - p.CushionScore;
+                        if (diffScore != 0)
+                        {
+                            PlayerUI playerUI = InGameUI.Instant.GetPlayerUIComponent(p.arrayIndex);
+                            playerUI.Show3CushionEffect(diffScore, true, false);
+                        }
+                    }
+
+                    Cushion3Match.Instant.SetTableAndTakeMoney(Protocol.userSerial, adjustScore, Protocol.tableMoney, Protocol.takeMoney, Protocol.takenMoney, Protocol.changeMoney);
+                    Cushion3Match.Instant.SetScore(Protocol.userSerial, adjustScore);
+                }
+                break;
+            case PROTOCOL.RS_PVP_SHOT_RESULT_B:
+                {
+                    rs_pvp_shot_result_b Protocol = (rs_pvp_shot_result_b)unit.xp;
+
+                    if (MatchHelper.GetMatchState() == MatchState.Shot)
+                    {
+                        for (int i = 0; i < 100; i++)
+                            GameManager.Instant.UpdateFrame(Time.fixedDeltaTime);
+                    }
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    if (GlobalGameData.Instant.gameMode != GameMode.Mode8Ball)
+                        Cushion3Match.Instant.GameReplayTurnUserPosAndRotate(Protocol.ballInfo, Protocol.tableInfo, Protocol.ballDirInfo);
+                }
+                break;
+            case PROTOCOL.RS_PVP_RESULT:
+                {
+                    rs_pvp_result Protocol = (rs_pvp_result)unit.xp;
+
+                    //result 1:정상 종료, 2: 비정상종료, 3: 타임 아웃
+                    GlobalGameData.Instant.winSerialID = Protocol.winnerSerial;
+
+                    // ------
+                    switch (GlobalGameData.Instant.matchType)
+                    {
+                       case MatchType.ClubTournament:
+                            InGameUI.Instant.OpenClubTournamentResult(Protocol.winnerSerial);
+                            break;
+                       case MatchType.ClubTournamentPrematch:
+                            {
+                                int rankNum = InGameClubTourneyPrematchUI.Instant.final_rankNum;
+                                long final_time = InGameClubTourneyPrematchUI.Instant.final_time;
+
+                                if ((InGameResultUI.ResultReason)Protocol.result == InGameResultUI.ResultReason.TimeOut)
+                                {
+                                    InGameUI.Instant.OpenClubTournamentPrematchResult(0, 0, false, Protocol.result);
+                                }
+                                else
+                                {
+                                    if (InGameClubTourneyPrematchUI.Instant.myRank_ready == true)
+                                    {
+                                        // 정상 종료 인가? 타임 아웃 인가?
+                                        if ((InGameResultUI.ResultReason)Protocol.result == InGameResultUI.ResultReason.Normal)
+                                        {
+                                            // 32등 안에 들었는가?
+                                            if (rankNum <= 32)
+                                                InGameUI.Instant.OpenClubTournamentPrematchResult(rankNum, final_time, true, Protocol.result);
+                                            else
+                                                InGameUI.Instant.OpenClubTournamentPrematchResult(rankNum, final_time, false, Protocol.result);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // final_rankNum과 final_time이 '0'이란 것은 아직 rs_clubtm_pre_score이 오지 않았단 것이므로
+                                        // InGameClubTourneyPrematchUI에 rs_pvp_result 프로토콜을 저장해 둔 뒤 InGameClubTourneyPrematchUI에서 결과창을 띄운다
+                                        InGameClubTourneyPrematchUI.Instant.prematch_result = Protocol;
+                                        InGameClubTourneyPrematchUI.Instant.protocol_ready = true;
+                                    }
+                                }
+                            }
+                            break;                        
+                        default:
+                            InGameUI.Instant.OpenClubTournamentResult(Protocol.winnerSerial);
+                            break;
+                    }
+                    // ------
+                }
+                break;
+            case PROTOCOL.RS_PVP_CONNECT:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_DISCONNECT:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_SECOND_CHANCE:
+                {
+                 }
+                break;
+            case PROTOCOL.RS_PVP_SEND_MESSAGE:
+                {
+                    rs_pvp_send_message Protocol = (rs_pvp_send_message)unit.xp;
+
+                    NotifyDisplayUI.Instant.RemovePlayOtherPlayerWaitText();
+                    Player p = MatchHelper.GetPlayerFromSerialID(Protocol.userSerial);
+
+                    if (p != null)
+                    {
+                        PlayerUI playerUI = null;
+
+                        if(p.arrayIndex == 0)
+                        {
+                            playerUI = InGameUI.Instant.GetPlayerUIComponent(0);
+                        }
+                        else
+                        {
+                            playerUI = InGameUI.Instant.GetPlayerUIComponent(1);
+                        }
+
+                        if (playerUI != null)
+                        {
+                            playerUI.ShowChatMsg(Protocol.messageIndex);
+                        }
+                    }
+                }
+                break;
+            case PROTOCOL.RS_SEND_CHAT:
+                {
+                }
+                break;
+            case PROTOCOL.RS_CUE_CHANGE:
+                {
+                    rs_cue_change Protocol = (rs_cue_change)unit.xp;
+
+                    Player p = MatchHelper.GetPlayer(0);
+                    if(p.serialID == Protocol.userSerial)
+                        CueModel.SetPlayer1Cue(Protocol.cueIndex, Protocol.cueGrade, Protocol.cueLevel, Protocol.cueAdvStat);
+                    else 
+                        CueModel.SetPlayer2Cue(Protocol.cueIndex, Protocol.cueGrade, Protocol.cueLevel, Protocol.cueAdvStat);
+
+                    CueController.Instant.ChangeCueOnPlay();
+                    CueMasseUI.Instant.ChangeCue();
+                }
+                break;
+            case PROTOCOL.RS_PVP_LUCKY_GAUGE:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_ACTIVE_SKILL:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_LUCKY_ITEM:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_FOUL_GUARD:
+                {
+                }
+                break;
+            case PROTOCOL.RS_PVP_AIM_COUNT:
+                {
+                    rs_pvp_aim_count Protocol = (rs_pvp_aim_count)unit.xp;
+
+                    Player player = MatchHelper.GetPlayerFromSerialID(Protocol.userSerial);
+                    if (player != null)
+                    {
+                        player.SetExtraAimCount(Protocol.aimCount);
+                    }
+                }
+                break;
+            case PROTOCOL.RS_CLUBTM_PRE_SCORE:
+                {
+                    rs_clubtm_pre_score Protocol = (rs_clubtm_pre_score)unit.xp;
+
+                    if (MatchHelper.isClubTournamentPreMatch())
+                        InGameClubTourneyPrematchUI.Instant.Setting_RankingList(Protocol);
+                }
+                break;
+            case PROTOCOL.RS_CLUBMTR_REMAIN_TIME:
+                {
+                    rs_clubmtr_remain_time Protocol = (rs_clubmtr_remain_time)unit.xp;
+
+                    GameMode gameMode = GlobalGameData.Instant.gameMode;
+
+                    if (gameMode == GameMode.Mode4Ball || gameMode == GameMode.Mode3Cushion)
+                    {
+                        if (Cushion3Match.Instant != null)
+                            Cushion3Match.Instant.ClubTournamentRemainTime(Protocol.matchLimitTime, Protocol.remainTime);
+                    }
+                }
+                break;          
+        }
+        
+        GameRecordManager.Instant.RemoveHeadUnit();
+
+        return unit;
+    }
+    
+    #endregion
+
+    //----------------------------------------------------------------------------------
+    // Public Function.
+    #region ( Public Function)
+
+    public void OnEnter(Cushion3Match match)
+    {
+        cushio3Match = match;
+
+        JSONNode rootNode = GameRecordManager.Instant.GetRootNode();
+        if (rootNode == null)
+            return;
+
+        int playerCount = rootNode["players"].Count;
+        
+        for (int i = 0; i < playerCount; i++)
+        {
+            Player p = match.GetPlayer(i);
+            if (p == null)
+                continue;
+
+            JSONNode playerNode = rootNode["players"][i];
+            p.ParseJsonRecord(playerNode);
+        }
+
+        GameRecordMatchInfo grMatchInfo = GameRecordManager.Instant.GetMatchInfo();
+        if (grMatchInfo.player1CueIndex > 0 && grMatchInfo.player2CueIndex > 0)
+        {
+            CueModel.SetPlayer1Cue(grMatchInfo.player1CueIndex, grMatchInfo.player1CueGrade, grMatchInfo.player1CueLevel, grMatchInfo.player1CueAdvStat);
+            CueModel.SetPlayer2Cue(grMatchInfo.player2CueIndex, grMatchInfo.player2CueGrade, grMatchInfo.player2CueLevel, grMatchInfo.player2CueAdvStat);
+        }
+    }
+
+    public void UpdateFrame(float fElapsed)
+    {
+        switch (state)
+        {
+            case ReplayState.Init:
+                UpdateInitState(fElapsed);
+                break;
+            case ReplayState.Start:
+                UpdateStartState(fElapsed);
+                break;
+            case ReplayState.Run:
+                UpdateRunState(fElapsed);
+                break;
+        }
+
+        if (InGameResultUI.Instant != null && InGameResultUI.Instant.isGameOutReady())
+        {
+            AGSceneManager.Instant.ChangeScene(AGSceneManager.SceneType.LobbyScene);
+        }
+    }
+
+    public void SendPacket(short protocolID)
+    {
+        switch (protocolID)
+        {
+            case PROTOCOL.RQ_PVP_MATCH_SCORE:
+                break;
+            case PROTOCOL.RQ_PVP_SECOND_CHANCE:
+                break;
+            case PROTOCOL.RQ_PVP_AIM_COUNT:
+                break;
+            case PROTOCOL.RQ_PVP_REJOINABLE_MATCH:
+                break;
+            case PROTOCOL.RQ_PVP_REJOIN_MATCH:
+                break;
+            case PROTOCOL.RQ_PVP_START:
+                {
+                    runReady = true;
+                    if (CheckRunReady())
+                        ChangeState(ReplayState.Run);
+                }
+                break;
+            case PROTOCOL.RQ_PVP_CUE_MOVE_B:
+                break;
+            case PROTOCOL.RQ_PVP_SHOT_MOVE_B:
+                break;
+            case PROTOCOL.RQ_PVP_SHOT_B:
+                break;
+            case PROTOCOL.RQ_PVP_SHOT_RESULT_B:
+                break;
+            case PROTOCOL.RQ_PVP_BALL_INHAND_B:
+                break;
+            case PROTOCOL.RQ_PVP_FOUL_GUARD:
+                break;
+        }
+    }
+
+    #endregion
+}
