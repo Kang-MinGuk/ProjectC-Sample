@@ -1,0 +1,471 @@
+using UnityEngine;
+using System.Collections;
+
+namespace XGuard
+{
+
+    public class PlayerAI
+    {
+        enum PlayerAIState
+        {
+            AI_NoActive,
+            AI_CueAngleWait,
+            AI_CueAngle,
+            AI_CueAngleRotate,
+            AI_CueThickness,
+            AI_CueThicknessRotate,
+            AI_CueSpin,
+            AI_ShotMoveDelay,
+            AI_ShotMove,
+            AI_ShotWait,
+            AI_Shot,
+            AI_Finish
+        }
+
+        Vect refvec = new Vect(0, 1, 0);
+        Vector2 tempV1 = new Vector2();
+        Vector2 tempV2 = new Vector2();
+
+        bool isNearTargetBall = true;
+        BallType targetBall = null;
+        BallType otherTargetBall = null;
+
+        double currCueAngle = 0.0f;
+        double targetCueAngle = 0.0f;
+        double otherTargetCueAngle = 0.0f;
+        double currCuePower = 0.0f;
+        double cuePower = 1.0f;
+
+        bool rightSpin = true;
+
+        int stateParam1 = 0;
+
+        PlayerAIState aiState = PlayerAIState.AI_CueAngle;
+
+        float stateTime = 0.0f;
+        ElapsedTimer stateTimer = new ElapsedTimer();
+
+        //----------------------------------------------------------------------------------
+        // Private Function.
+        #region( Private Function. )
+
+        private double CalcCueAngle(BallType b1, BallType b2)
+        {
+            double cueAngle = Vect.ComputeAngleBAC(b1.r, b1.r + refvec, b2.r);    // 수평선과 이루는 각도
+            return cueAngle;
+        }
+
+        private BallType FindTargetBall(bool nearTarget)
+        {
+            if (GlobalGameData.Instant.gameMode == GameMode.Mode8Ball)
+                return null;
+
+            int ballCount = GameManager.Instant.GetBallCount();
+            BallsType balls = GameManager.Instant.GetBallsType();
+
+            int cueBallIndex = GameManager.Instant.GetCueBallIndex();
+            BallType cueBall = GameManager.Instant.GetCueBall();
+
+            BallType ballTarget1 = null;
+            BallType ballTarget2 = null;
+
+            if (GlobalGameData.Instant.gameMode == GameMode.Mode4Ball)
+            {
+                // 0,1번 이외의 공이 target ball이다.
+                for (int i = 2; i < ballCount; i++)
+                {
+                    if (ballTarget1 == null)
+                    {
+                        ballTarget1 = balls.ball[i];
+                    }
+                    else
+                    {
+                        ballTarget2 = balls.ball[i];
+                    }
+                }
+            }
+            else if (GlobalGameData.Instant.gameMode == GameMode.Mode3Cushion)
+            {
+                // cue ball 이외의 공이 target ball이다.
+                for (int i = 0; i < ballCount; i++)
+                {
+                    if (i == cueBallIndex)
+                        continue;
+
+                    if (ballTarget1 == null)
+                    {
+                        ballTarget1 = balls.ball[i];
+                    }
+                    else
+                    {
+                        ballTarget2 = balls.ball[i];
+                    }
+                }
+            }
+
+            if (ballTarget1 == null || ballTarget2 == null)
+                return null;
+
+            float dist1 = (float)Vect.Distance(cueBall.r, ballTarget1.r);
+            float dist2 = (float)Vect.Distance(cueBall.r, ballTarget2.r);
+
+            if (nearTarget)
+                return (dist1 < dist2) ? ballTarget1 : ballTarget2;
+            else
+                return (dist1 > dist2) ? ballTarget1 : ballTarget2;
+        }
+
+        private BallType FindOtherTargetBall(BallType ballTarget)
+        {
+            if (ballTarget == null)
+                return null;
+
+            int ballCount = GameManager.Instant.GetBallCount();
+            BallsType balls = GameManager.Instant.GetBallsType();
+
+            int cueBallIndex = GameManager.Instant.GetCueBallIndex();
+            BallType cueBall = GameManager.Instant.GetCueBall();
+
+            if (GlobalGameData.Instant.gameMode == GameMode.Mode4Ball)
+            {
+                // 0,1번 이외의 공이 target ball이다.
+                for (int i = 2; i < ballCount; i++)
+                {
+                    if (i == ballTarget.nr)
+                        continue;
+
+                    return balls.ball[i];
+                }
+            }
+            else if (GlobalGameData.Instant.gameMode == GameMode.Mode3Cushion)
+            {
+                // cue ball 이외의 공이 target ball이다.
+                for (int i = 0; i < ballCount; i++)
+                {
+                    if (i == cueBallIndex)
+                        continue;
+                    if (i == ballTarget.nr)
+                        continue;
+
+                    return balls.ball[i];
+                }
+            }
+
+            return null;
+        }
+
+        private void ChangeAIState(PlayerAIState state)
+        {
+            switch (state)
+            {
+                case PlayerAIState.AI_CueAngleWait:
+                    isNearTargetBall = true;
+                    stateTimer.StartTimer(Random.Range(1.0f, 3.0f));
+                    break;
+                case PlayerAIState.AI_CueAngle:
+                    {
+                        currCueAngle = -GameManager.Instant.GetCurrentCueAngle();
+                        BallType cueBall = GameManager.Instant.GetCueBall();
+
+                        if (isNearTargetBall == false)
+                        {
+                            isNearTargetBall = true;
+                        }
+                        else
+                        {
+                            if (Random.Range(1, 1000) % 2 == 0)
+                                isNearTargetBall = true;
+                            else
+                                isNearTargetBall = false;
+                        }
+
+                        targetBall = FindTargetBall(isNearTargetBall);
+
+                        if (cueBall != null && targetBall != null)
+                        {
+                            targetCueAngle = CalcCueAngle(cueBall, targetBall);
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_CueAngleRotate:
+                    {
+                        stateParam1 = Random.Range(5, 15);
+                        stateTimer.StartTimer(Random.Range(0.3f, 1.0f));
+                    }
+                    break;
+                case PlayerAIState.AI_CueThickness:
+                    {
+                        BallType cueBall = GameManager.Instant.GetCueBall();
+                        otherTargetBall = FindOtherTargetBall(targetBall);
+                        if (cueBall != null && otherTargetBall != null)
+                        {
+                            double targetDeltaAngle = CalcCueAngle(targetBall, otherTargetBall);
+                            double deltaAngle = targetDeltaAngle - targetCueAngle;
+                            if (deltaAngle > 180.0f)
+                                deltaAngle = 360.0f - deltaAngle;
+                            if (deltaAngle < -180.0f)
+                                deltaAngle = -360.0f - deltaAngle;
+
+                            otherTargetCueAngle = CalcCueAngle(cueBall, otherTargetBall);
+
+                            Vect cueDir = targetBall.r - cueBall.r;
+                            cueDir.Normalize();
+                            Vect targetCross = Vect.Cross(cueDir, new Vect(0.0f, 0.0f, 1.0f));
+                            Vect targetThick = Vect.vec_null;
+
+                            float randDRange = Random.Range((float)(BallPoolDef.BALL_CUSHION3_D() * 0.5f), (float)(BallPoolDef.BALL_CUSHION3_D() * 1.0f));
+                            if (otherTargetCueAngle - targetCueAngle < 0.0f)
+                                targetThick = targetBall.r + targetCross * randDRange;
+                            else
+                                targetThick = targetBall.r - targetCross * randDRange;
+
+                            targetCueAngle = Vect.ComputeAngleBAC(cueBall.r, cueBall.r + refvec, targetThick);    // 수평선과 이루는 각도
+
+                            Vect TargetTootherDir = otherTargetBall.r - targetBall.r;
+                            TargetTootherDir.Normalize();
+                            float dotValue = (float)Vect.Dot(targetCross, TargetTootherDir);
+                            rightSpin = (dotValue < 0.0f) ? false : true;
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_CueThicknessRotate:
+                    stateParam1 = Random.Range(5, 10);
+                    stateTimer.StartTimer(Random.Range(0.5f, 1.0f));
+                    break;
+                case PlayerAIState.AI_CueSpin:
+                    stateTimer.StartTimer(Random.Range(2.0f, 4.0f));
+                    break;
+                case PlayerAIState.AI_ShotMoveDelay:
+                    stateTimer.StartTimer(Random.Range(1.0f, 2.0f));
+                    break;
+                case PlayerAIState.AI_ShotMove:
+                    cuePower = Random.Range(0.4f, 0.8f);
+                    currCuePower = 0.0f;
+                    stateTimer.StartTimer(Random.Range(0.1f, 0.2f));
+                    break;
+                case PlayerAIState.AI_ShotWait:
+                    stateTimer.StartTimer(Random.Range(0.5f, 1.0f));
+                    break;
+                case PlayerAIState.AI_Shot:
+                    {
+                        MatchHelper.ChangeMatchState(MatchState.Shot);
+
+                        CueController.Instant.CuePower(cuePower);
+                        GameManager.Instant.SetCuePower(cuePower);
+
+                        // cue speed는 실제 ball power
+                        float cueMinSpeed = PAM.Instant.GetC3_QBMinSpeed();
+                        float cueMaxSpeed = PAM.Instant.GetC3_QBMaxSpeed();
+                        float cueSpeed = cueMinSpeed + (cueMaxSpeed - cueMinSpeed) * 0.3f;
+
+                        Vect targetDirParam = GameManager.Instant.GetCurrentWhiteBallFCV();
+                        Vect lineParam = new Vect(targetDirParam.x, targetDirParam.y, targetDirParam.z);
+
+                        CueController.Instant.CueShot();
+                        GameManager.Instant.SetCuePower(cuePower);
+
+                        Vect cueBallPos = GameManager.Instant.GetCueBallPos();
+                        double cueAngle = GameManager.Instant.GetCurrentCueAngle();
+                        double cueSpinX = GameManager.Instant.GetCurrentCueSpinX();
+                        double cueSpinY = GameManager.Instant.GetCurrentCueSpinY();
+                        double sendcuePower = GameManager.Instant.GetCurrentCuePower();
+                        double cueShotValue = GameManager.Instant.GetCurrentCutShotValue();
+                        double masseAngle = GameManager.Instant.GetCurrentCueMasseAngle();
+
+                        if (GlobalGameData.Instant.gameMode == GameMode.Mode8Ball)
+                            GameManager.Instant.QueueShot8Ball(MatchHelper.isBreakCueBall(), cueSpeed);
+                        else
+                            GameManager.Instant.QueueShot3Cushion(cueSpeed);
+
+                        if (MatchHelper.isExerciseMatch() == false)
+                        {
+                            NetworkSession.Instant.On_rq_pvp_shot_b(cueBallPos.x, cueBallPos.y, cueSpinX, cueSpinY, cueAngle, cuePower, cueSpeed, lineParam, cueShotValue, masseAngle);
+                        }
+                        else
+                        {
+                            CuePowerUI.Instant.ChangeCuePowerState(CuePowerUI.CuePowerState.Out);
+                        }
+
+                        ChangeAIState(PlayerAIState.AI_Finish);
+                    }
+                    break;
+            }
+
+            stateTime = 0.0f;
+            aiState = state;
+        }
+
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Public Function.
+        #region( Public Function. )
+
+        public void UpdateFrame(float fElapsed)
+        {
+            stateTime += fElapsed;
+
+            switch (aiState)
+            {
+                case PlayerAIState.AI_CueAngleWait:
+                    stateTimer.UpdateFrame(fElapsed);
+                    if (stateTimer.isFinish())
+                    {
+                        ChangeAIState(PlayerAIState.AI_CueAngle);
+                    }
+                    break;
+                case PlayerAIState.AI_CueAngle:
+                    ChangeAIState(PlayerAIState.AI_CueAngleRotate);
+                    break;
+                case PlayerAIState.AI_CueAngleRotate:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            stateParam1--;
+
+                            if (stateParam1 > 0)
+                            {
+                                if (Mathf.Abs((float)(targetCueAngle - currCueAngle)) < 5.0f)
+                                {
+                                    currCueAngle = targetCueAngle + Random.Range(-2.0f, 2.0f);
+                                    stateParam1 -= 3;
+                                    if (stateParam1 < 0)
+                                        stateParam1 = 0;
+
+                                    stateTimer.StartTimer(Random.Range(0.2f, 0.6f));
+                                }
+                                else
+                                {
+                                    currCueAngle = currCueAngle + (targetCueAngle - currCueAngle) * 0.5f;
+                                    stateTimer.StartTimer(Random.Range(0.1f, 0.5f));
+                                }
+
+                                CueController.Instant.AICueAngle(currCueAngle);
+                            }
+                            else
+                            {
+                                CueController.Instant.AICueAngle(targetCueAngle);
+                                ChangeAIState(PlayerAIState.AI_CueThickness);
+                            }
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_CueThickness:
+                    ChangeAIState(PlayerAIState.AI_CueThicknessRotate);
+                    break;
+                case PlayerAIState.AI_CueThicknessRotate:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            stateParam1--;
+
+                            if (stateParam1 > 0)
+                            {
+                                if (stateParam1 < 3)
+                                {
+                                    currCueAngle = targetCueAngle + Random.Range(-0.5f, 0.5f);
+                                    stateTimer.StartTimer(Random.Range(0.2f, 0.8f));
+                                }
+                                else
+                                {
+                                    currCueAngle = currCueAngle + (targetCueAngle - currCueAngle) * 0.3f;
+                                    stateTimer.StartTimer(Random.Range(0.3f, 0.8f));
+                                }
+
+                                CueController.Instant.AICueAngle(currCueAngle);
+                            }
+                            else
+                            {
+                                if (isNearTargetBall == false)
+                                {
+                                    ChangeAIState(PlayerAIState.AI_CueAngle);
+                                }
+                                else
+                                {
+                                    CueController.Instant.AICueAngle(targetCueAngle);
+                                    ChangeAIState(PlayerAIState.AI_CueSpin);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_CueSpin:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            float minSpinX = PAM.Instant.GetC3_MinSpinX();
+                            float maxSpinX = PAM.Instant.GetC3_MaxSpinX();
+                            float spinStrengthX = minSpinX + (maxSpinX - minSpinX) * 0.3f;
+                            float spinStrengthY = 0.0f;
+
+                            float spinUIX = 1.0f;
+                            float spinUIY = 0.0f;
+
+                            if (rightSpin == false)
+                            {
+                                spinStrengthX = -spinStrengthX;
+                                spinUIX = -spinUIX;
+                            }
+
+                            GameManager.Instant.SetSpinStrength(spinStrengthX, spinStrengthY);
+                            GameManager.Instant.SetSpinUIValue(spinUIX, spinUIY);
+                            BallSpinButtonUI.Instant.SetSpin(spinStrengthX, spinStrengthY);
+
+                            ChangeAIState(PlayerAIState.AI_ShotMoveDelay);
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_ShotMoveDelay:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            ChangeAIState(PlayerAIState.AI_ShotMove);
+                        }
+                    }
+                    break;
+                case PlayerAIState.AI_ShotMove:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            currCuePower += Random.Range(0.1f, 0.3f);
+                            if (currCuePower >= cuePower)
+                            {
+                                currCuePower = cuePower;
+                                ChangeAIState(PlayerAIState.AI_ShotWait);
+                            }
+                            else
+                            {
+                                stateTimer.Reset();
+                            }
+
+                            CueController.Instant.NetSyncCuePower(currCuePower);
+                        }
+
+                        break;
+                    }
+                case PlayerAIState.AI_ShotWait:
+                    {
+                        stateTimer.UpdateFrame(fElapsed);
+                        if (stateTimer.isFinish())
+                        {
+                            ChangeAIState(PlayerAIState.AI_Shot);
+                        }
+                    }
+                    break;
+            }
+        }
+
+        public void NextTurn()
+        {
+            ChangeAIState(PlayerAIState.AI_CueAngleWait);
+        }
+
+        #endregion
+    }
+
+}
