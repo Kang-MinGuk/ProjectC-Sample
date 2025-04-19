@@ -1,0 +1,2099 @@
+using UnityEngine;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using CodeStage.AntiCheat.ObscuredTypes;
+
+namespace XGuard
+{
+    public static class BallPoolDef
+    {
+        public const int BALL_8_NUM = 16;
+        public const int BALL_9_NUM = 10;
+        public const int BALL_3CUSHION_NUM = 3;
+        public const int BALL_4_NUM = 4;
+
+        // public const double options_table_size = 2.1336f;      // 7 ft (smallest normed)
+        public const double options_table_size = 1.756f;          // BallPool 프로젝트 보정 수치.
+        public const double TABLE_W = (options_table_size / 2.0f - 0.002f);
+        public const double TABLE_L = (options_table_size);
+        public const double TABLE_H = 0.84f;                       // 84 cm
+
+        public const double TABLE_INIT_X = -0.0000f;
+        public const double TABLE_INIT_Y = -0.0000f;
+
+        public const double BALL_M = 0.17f;              // 170 g
+        public const double BALL_D = 0.05715f;           // 57.15 mm
+        public const double BALL_R = (BALL_D / 2.0f);
+
+        public const double BALL_CUSHION3_SCALE_DEF = 1.05f;
+        public const double BALL_CUSHION3_BIGTABLE_SCALE_DEF = 0.95f;
+
+        /*
+        public const double BALL_CUSHION3_M = (BALL_M * BALL_CUSHION3_SCALE * 2.0f);
+        public const double BALL_CUSHION3_D = (BALL_D * BALL_CUSHION3_SCALE);
+        public const double BALL_CUSHION3_R = (BALL_R * BALL_CUSHION3_SCALE);
+         * */
+
+        // public const double HOLE1_TAN = 1.42815f; /* cotan(35? */
+        // public const double HOLE1_TAN = 1.19175f; /* cotan(40? */
+        public const double HOLE1_TAN = 1.110617f;   /* cotan(42? */
+        // public const double HOLE1_TAN = 1f;          /* cotan(45? */
+        public const double HOLE1_TAN_B = 1.19175f; /* cotan(40? */
+
+
+        public const double HOLE1_R = (0.110f / 2.0f);         /* d=110 mm */
+        //public const double HOLE1_R = (0.120f / 2.0f);         /* d=120 mm */
+        public const double HOLE2_R = (0.095f / 2.0f);         /* d=95 mm */
+        public const double QUEUE_L = 1.4f;                  /* 1.4 m */
+        public const double QUEUE_D1 = 0.035f;               /* 3.5cm */
+        public const double QUEUE_D2 = 0.010f;               /* 1.0cm */
+        public const double BANDE_D = 0.035f;                /* 3.5cm to be conform with normed opening of middle pockets */
+        public const double BANDE_D2RATIO = 0.5f;            /* (1-0.3)*BANDE_D */
+        public const double BANDE_D2 = (BANDE_D * (1.0f - 0.3f));  /* (1-0.3)*BANDE_D */
+
+
+        public const double HOLE2_TAN = 0.36397f; /* tan(20? */
+        public const double HOLE1_AIMOFFS = 0.02f;  /* */
+        public const double HOLE2_AIMOFFS = 0.02f;  /* */
+        public const double HOLE1_PHASE = 0.005f;  /* */
+        public const double HOLE2_PHASE = 0.005f;  /* */
+
+
+        public const double HOLE_SQRT_VALUE = 2.0f;
+
+        public static double BALL_CUSHION3_SCALE()
+        {
+            return (GlobalGameData.Instant.bigTableMode) ? BALL_CUSHION3_BIGTABLE_SCALE_DEF : BALL_CUSHION3_SCALE_DEF;
+        }
+
+        public static double BALL_CUSHION3_M()
+        {
+            return (BALL_M * BALL_CUSHION3_SCALE() * 2.0f);
+        }
+
+        public static double BALL_CUSHION3_D()
+        {
+            return (BALL_D * BALL_CUSHION3_SCALE());
+        }
+
+        public static double BALL_CUSHION3_R()
+        {
+            return (BALL_R * BALL_CUSHION3_SCALE());
+        }
+
+        public static double HOLE1_W()
+        {
+            return (2.0f * HOLE1_R - Math.Sqrt(HOLE_SQRT_VALUE) * BANDE_D * (1.0f - HOLE1_TAN));
+        }
+
+        public static double HOLE2_W()
+        {
+            return (HOLE2_R * 2.0f + HOLE2_TAN * BANDE_D * 2.0f);
+        }
+
+        public static double HOLE1_WH()
+        {
+            return HOLE1_W() / 2.0f;
+        }
+
+        public static double HOLE2_WH()
+        {
+            return HOLE2_W() / 2.0f;
+        }
+
+        public static double HOLE1_XOFFS()
+        {
+            return (0.042f / Math.Sqrt(HOLE_SQRT_VALUE));
+        }
+
+        public static double HOLE1_YOFFS()
+        {
+            return (0.045f / Math.Sqrt(HOLE_SQRT_VALUE));
+        }
+
+        public static double HOLE2_XYOFFS()
+        {
+            return (HOLE2_R) - 0.005f;
+        }
+
+        // public const double QUEUEBALL_MAXSPEED = 9.0f;
+        // public const double BREAKSHOT_MAXSPEED = 10.0f;
+        // public const double BREAKSHOT_MAXSPEED_DELTA = 0.3f;
+
+        // public const double CUSHION3_QUEUEBALL_MAXSPEED = 9.0f;
+
+        // 이제부터는 custom value( by HyungSuk, Jang 2015.06.29 )
+        // public const double BALL8_QUEUE_MAXSPIN_X = 0.020f;
+        // public const double BALL8_QUEUE_MAXSPIN_Y = 0.020f;
+
+        // public const double CUSHION3_QUEUE_MAXSPIN_X = 0.06f;
+        // public const double CUSHION3_QUEUE_MAXSPIN_Y = 0.02f;
+
+        public const double QUEUE_BALL_INIT_X = 0.002f;
+        public const double QUEUE_BALL_INIT_Y = -0.44f;
+
+        public const double FIRST_BALL_INIT_X = 0.002f;
+        public const double FIRST_BALL_INIT_Y = 0.44f;
+
+        public const double SECOND_BALL_INIT_X = 0.002f;
+        public const double SECOND_BALL_INIT_Y = 0.66f;
+
+        public const double INIT_CUTSHOT_VALUE = 0.5f;
+        public const double INIT_MASSE_VALUE = -83.0f;
+    }
+
+    public class XCirUI
+    {
+        public Vector3[] v = new Vector3[4];
+        public Vector2[] uv = { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+        public int[] tri = { 0, 2, 1, 0, 3, 2 };
+    }
+
+    public class XCirP
+    {
+        Vector3 dummyPos = new Vector3(0.0f, 0.0f, 0.0f);
+        Vector2[] dummyUV = { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+        int[] dummyTriangles = { 0, 2, 1, 0, 3, 2 };
+                
+        public Vector3[] vert = null;
+        public Vector2[] uv = null;
+        public int[] tri = null;
+
+        public Vector3[] ext_vert = null;
+        public Vector2[] ext_uv = null;
+        public int[] ext_tri = null;
+
+        public List<XCirUI> plCir = new List<XCirUI>();
+        public List<XCirUI> plCirExt = new List<XCirUI>();
+
+        public ObscuredInt plActCount = 0;
+        public ObscuredInt plActCountExt = 0;
+ 
+        public void Init()
+        {
+            int cirCount = PAM.Instant.GetC3_MaxTotalAim() + 5;
+            for (int i = 0; i < cirCount; i++)
+            {
+                plCir.Add(new XCirUI());
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                plCirExt.Add(new XCirUI());
+            }
+        }
+
+        public void UpdateVertex()
+        {
+            int cirBuffer = PAM.Instant.GetC3_MaxTotalAim() + 5;
+
+            if(vert == null)
+            {
+                vert = new Vector3[4*cirBuffer];
+                uv = new Vector2[4*cirBuffer];
+                tri = new int[6*cirBuffer];
+            }
+
+            int index = 0;
+
+            for (int i = 0; i < cirBuffer; i++)
+            {
+                if (i < plActCount)
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        index = i * 4 + j;
+                        vert[index] = plCir[i].v[j];
+                        uv[index] = plCir[i].uv[j];
+                    }
+
+                    for (int k = 0; k < 6; k++)
+                    {
+                        index = i * 6 + k;
+                        tri[index] = plCir[i].tri[k] + i * 4;
+                    }
+                }
+                else
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        index = i * 4 + j;
+                        vert[index] = dummyPos;
+                        uv[index] = dummyUV[j];
+                    }
+
+                    for (int k = 0; k < 6; k++)
+                    {
+                        index = i * 6 + k;
+                        tri[index] = dummyTriangles[k] + i * 4;
+                    }
+                }
+            }
+
+            int cirExtBuffer = 6;
+
+            if (ext_vert == null)
+            {
+                ext_vert = new Vector3[4 * cirExtBuffer];
+                ext_uv = new Vector2[4 * cirExtBuffer];
+                ext_tri = new int[6 * cirExtBuffer];
+            }
+
+            for (int i = 0; i < cirExtBuffer; i++)
+            {
+                if (i < plActCountExt)
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        index = i * 4 + j;
+                        ext_vert[index] = plCirExt[i].v[j];
+                        ext_uv[index] = plCirExt[i].uv[j];
+                    }
+
+                    for (int k = 0; k < 6; k++)
+                    {
+                        index = i * 6 + k;
+                        ext_tri[index] = plCirExt[i].tri[k] + i * 4;
+                    }
+                }
+                else
+                {
+                    for (int j = 0; j < 4; j++)
+                    {
+                        index = i * 4 + j;
+                        ext_vert[index] = dummyPos;
+                        ext_uv[index] = dummyUV[j];
+                    }
+
+                    for (int k = 0; k < 6; k++)
+                    {
+                        index = i * 6 + k;
+                        ext_tri[index] = dummyTriangles[k] + i * 4;
+                    }
+                }
+            }
+
+        }
+
+        public void Update()
+        {
+            int totAimCount = GameManager.Instant.GetSimulActiveCount();
+            int extraAimCount = GameManager.Instant.GetSimulExtraActiveCount();
+            int basicAimCount = totAimCount - extraAimCount;
+            plActCount = 0;
+
+            int cirCount = PAM.Instant.GetC3_MaxTotalAim() + 1;
+
+            plActCount = basicAimCount;
+            plActCountExt = extraAimCount;
+
+            if (plActCount >= cirCount)
+            {
+                plActCount = cirCount;
+            }
+
+            if (plActCountExt >= 5)
+                plActCountExt = 5;
+
+            List<SimulBallData> inputDatas = GameManager.Instant.GetSimulDataList();
+
+            float CW = .030f;
+
+            for (int i = 0; i < plActCount; i++)
+            {
+                Vector3 uiPos = BPUIHelper.FooToUIPosition(inputDatas[i].r);
+
+                plCir[i].v[0].Set(-CW + uiPos.x, -CW + uiPos.y, 0.01f);
+                plCir[i].v[1].Set(CW + uiPos.x, -CW + uiPos.y, 0.01f);
+                plCir[i].v[2].Set(CW + uiPos.x, CW + uiPos.y, 0.01f);
+                plCir[i].v[3].Set(-CW + uiPos.x, CW + uiPos.y, 0.01f);
+            }
+
+            for (int i = 0; i < plActCountExt; i++)
+            {
+                Vector3 uiPos = BPUIHelper.FooToUIPosition(inputDatas[basicAimCount + i].r);
+
+                plCirExt[i].v[0].Set(-CW + uiPos.x, -CW + uiPos.y, 0.01f);
+                plCirExt[i].v[1].Set(CW + uiPos.x, -CW + uiPos.y, 0.01f);
+                plCirExt[i].v[2].Set(CW + uiPos.x, CW + uiPos.y, 0.01f);
+                plCirExt[i].v[3].Set(-CW + uiPos.x, CW + uiPos.y, 0.01f);
+            }
+
+            UpdateVertex();
+        }        
+    }
+
+    public class GameManager
+    {
+        PhysicGameType gameType = PhysicGameType.GAME_8BALL;
+        BallsType balls = new BallsType();
+        BordersType walls = new BordersType();
+        XCirP xCirP = new XCirP();
+
+        // 당구 물리 능력치.
+        ObscuredDouble Xque = BallPoolDef.INIT_MASSE_VALUE, Zque = 0.0f;
+
+        ObscuredDouble queue_spin_x = 0.0f;     // ( -QUEUE_MAXSPIN_X ~ QUEUE_MAXSPIN_X ) 사이.
+        ObscuredDouble queue_spin_y = 0.0f;     // ( -QUEUE_MAXSPIN_Y ~ QUEUE_MAXSPIN_Y ) 사이.
+        ObscuredDouble queue_strength = 0.5f;   // ( 0 ~ 1 ) 사이
+
+        ObscuredDouble queue_spin_ui_x = 0.0f;
+        ObscuredDouble queue_spin_ui_y = 0.0f;
+
+        // simulation balls
+        BallsType simul_balls = null;
+        ObscuredBool is_simulation = false;
+        List<SimulBallData> simulDataList = new List<SimulBallData>();
+        ObscuredInt simul_wall_colli_count = 0;
+        ObscuredInt simul_active_count = 0;
+        ObscuredInt simul_extra_active_count = 0;   // legend extra aim count...
+        ObscuredDouble simul_cue_strength = 0.7f;
+        ObscuredDouble simul_cue_speed = 10.0f;
+        ObscuredInt simul_stat_aim = 1;
+        ObscuredInt simul_char_stat_aim = 0;
+        ObscuredInt simul_stat_extra_aim_count = 0;
+        ObscuredBool simul_kiss_show = false;
+
+        ObscuredDouble cutshot_value = BallPoolDef.INIT_CUTSHOT_VALUE;
+
+        ObscuredInt cueBallIndex = 0;
+        ObscuredBool firstUpdate = true;
+        ObscuredBool updatePause = false;
+        ObscuredBool forgroundPause = false;
+
+        Vect whiteBallFCV = Vect.vec_null;          // first collsion vector of white ball.
+        VRect breakBallArea = VRect.rect_null;
+        VRect freeBallArea = VRect.rect_null;
+        VRect validBallArea = VRect.rect_null;
+
+        public int proceed_tick_num = 0;
+
+        int createRandomSeed;
+        bool creteRandomRoll;
+
+        public bool IsReplaying {
+            get; set;
+        }
+
+        public int CreateRandomSeed {
+            get { return createRandomSeed; }
+        }
+
+        public bool CreateRandomRoll {
+            get { return creteRandomRoll; }
+        }
+
+        public XCirP XCIRP {
+            get { return xCirP; }
+        }
+
+        static GameManager _Instant = null;
+
+        //----------------------------------------------------------------------------------
+        // Attribute Function.
+        #region( Attribute Function. )
+
+        public static GameManager Instant
+        {
+            get { return _Instant; }
+        }
+
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Public Function.
+        #region ( Public Function)
+
+        // Use this for initialization
+        public void OnEnter(PhysicGameType gameType, int randomSeed, bool randomRoll)
+        {
+            _Instant = this;
+
+            xCirP.Init();
+
+            this.gameType = gameType;
+
+            if (gameType == PhysicGameType.GAME_8BALL)
+            {
+                BallPhysic.set_physic_mode(physic_mode.mode_8ball);
+                Create8Ball(randomSeed);
+                Create6HoleWalls();
+            }
+            else if (gameType == PhysicGameType.GAME_3CUSHION)
+            {
+                BallPhysic.set_physic_mode(physic_mode.mode_3cushion);
+
+                Create3CushionBall(randomSeed, randomRoll);
+                Create3CushionWalls();
+            }
+            else if (gameType == PhysicGameType.GAME_4BALL)
+            {
+                BallPhysic.set_physic_mode(physic_mode.mode_4ball);
+
+                Create4Ball(randomSeed, randomRoll);
+                Create3CushionWalls();
+            }
+
+            InitFreeBallArea();
+            BallPhysic.table_area(GetFreeBallArea(0.0f));
+
+            // 샷을 로컬 디비에 저장하는 역할을 하는 매니저 실행
+            if (MatchHelper.isShotClipSave())
+            {
+                ShotClipManager.Instant.Run();
+            }
+
+            // 
+            createRandomSeed = randomSeed;
+            creteRandomRoll = randomRoll;
+        }
+
+        public void UpdateFrame(float fElapsed)
+        {
+            // 첫 udpate인가?
+            if (firstUpdate)
+            {
+                firstUpdate = false;
+
+                // foo physic을 unity 변환.
+                InitFooPhysicToUnity();
+            }
+
+            if (forgroundPause == false)
+            {
+                FixedUpdateCustom();
+            }
+
+            if (is_simulation)
+            {
+                FixedUpdateSU();
+            }
+
+            UpdateBallVisual();
+        }
+
+        public void OnExit()
+        {
+            _Instant = null;
+        }
+
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Private Function.
+        #region ( Private Function)
+
+        private void Create8Ball(int randomSeed)
+        {
+            SetCueBallIndex(0);
+
+            Vect dball1, dball2, vdummy;
+            //    double poserr=0.002;
+            double poserr = 0.007f;
+
+            balls.gametype = PhysicGameType.GAME_8BALL;
+
+            /* balls */
+            balls.nr = BallPoolDef.BALL_8_NUM;
+            balls.ball = new BallType[balls.nr];
+            for (int i = 0; i < balls.nr; i++)
+                balls.ball[i] = new BallType();
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].m = BallPoolDef.BALL_M;
+                /* I_kugel = (m.r^2)2/5 = (m.d^2)/10 */
+                balls.ball[i].I = BallPoolDef.BALL_M * BallPoolDef.BALL_D * BallPoolDef.BALL_D / 10.0f /**0.01*/;
+                balls.ball[i].d = BallPoolDef.BALL_D;
+                balls.ball[i].v = Vect.vec_null;
+                balls.ball[i].w = Vect.vec_null;
+                balls.ball[i].w2 = Vect.vec_null;
+
+                /*
+                balls.ball[i].b[0] = Vect.vec_unit(new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot)));
+                vdummy = new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot));
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+                */
+                balls.ball[i].b[0] = new Vect(1.0f, 0.0f, 0.0f);
+                vdummy = new Vect(0.0f, 0.0f, -1.0f);
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+
+                balls.ball[i].nr = i;
+                balls.ball[i].in_game = true;
+                balls.ball[i].in_hole = 0;
+                balls.ball[i].in_hole_store = 0;
+                balls.ball[i].in_outlet = 1;
+            }
+
+            dball1 = Vect.vec_scale(new Vect(-0.5f, 0.5f * Math.Sqrt(3.0f), 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_D);
+            dball2 = Vect.vec_scale(new Vect(1.0f, 0.0f, 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_D);
+
+            List<Vect> ballRList = new List<Vect>();
+            ballRList.Add(new Vect(BallPoolDef.QUEUE_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f));
+            ballRList.Add(new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.FIRST_BALL_INIT_Y, 0.0f));
+            ballRList.Add(Vect.vec_add(ballRList[1], dball1));
+            ballRList.Add(Vect.vec_add(ballRList[2], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[2], dball1));
+            ballRList.Add(Vect.vec_add(ballRList[4], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[5], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[4], dball1));
+            ballRList.Add(Vect.vec_add(ballRList[7], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[8], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[9], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[7], dball1));
+            ballRList.Add(Vect.vec_add(ballRList[11], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[12], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[13], dball2));
+            ballRList.Add(Vect.vec_add(ballRList[14], dball2));
+
+            /* white ball */
+            balls.ball[0].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+            balls.ball[0].w = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].w2 = new Vect(0.0f, 0.0f, 0.0f);
+
+            // other ball position
+            SimpleRandom simpleRandom = new SimpleRandom();
+            simpleRandom.seed(randomSeed);
+
+            int left_out_ball = (simpleRandom.rand() % (8 - 1)) + 1;  // Random.Range(1, 8);
+            int right_out_ball = (simpleRandom.rand() % (8 - 1)) + 9;  // Random.Range(9, 16);
+
+            // 8 ball position
+            balls.ball[8].r = ballRList[5];
+            balls.ball[left_out_ball].r = ballRList[11];
+            balls.ball[right_out_ball].r = ballRList[15];
+
+            /* other balls */
+            List<int> randBallList = new List<int>();
+            for (int i = 1; i < balls.nr; i++)
+            {
+                if (i == 8 || i == left_out_ball || i == right_out_ball)
+                    continue;
+
+                randBallList.Add(i);
+            }
+
+            int randPosIndex = 1;
+
+            while (randBallList.Count > 0)
+            {
+                int randValue = simpleRandom.rand() % randBallList.Count; // Random.Range(0, randBallList.Count);
+                int randBallId = randBallList[randValue];
+
+                balls.ball[randBallId].r = ballRList[randPosIndex];
+
+                randPosIndex++;
+                if (randPosIndex == 5 || randPosIndex == 11 || randPosIndex == 15)
+                    randPosIndex++;
+
+                randBallList.RemoveAt(randValue);
+            }
+
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                // balls.ball[i].path = 0;
+                balls.ball[i].pathcnt = 0;
+                balls.ball[i].pathsize = 0;
+                balls.ball[i].ballcollicnt = 0;
+                balls.ball[i].wallcnt = 0;
+            }
+
+            //    balls.ball[0].v=vec_xyz(1.5,2.0,0.0);
+            balls.ball[0].v = Vect.vec_null;
+        }        
+        
+        private void Create3CushionBall(int randomSeed, bool randomRoll)
+        {
+            Vect dball1, dball2, vdummy;
+            //    double poserr=0.002;
+            double poserr = 0.007f;
+
+            balls.gametype = PhysicGameType.GAME_3CUSHION;
+
+            /* balls */
+            balls.nr = BallPoolDef.BALL_3CUSHION_NUM;
+            balls.ball = new BallType[BallPoolDef.BALL_3CUSHION_NUM];
+            for (int i = 0; i < BallPoolDef.BALL_3CUSHION_NUM; i++)
+                balls.ball[i] = new BallType();
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].m = BallPoolDef.BALL_CUSHION3_M();
+                /* I_kugel = (m.r^2)2/5 = (m.d^2)/10 */
+                balls.ball[i].I = BallPoolDef.BALL_CUSHION3_M() * BallPoolDef.BALL_CUSHION3_D() * BallPoolDef.BALL_CUSHION3_D() / 10.0f /**0.01*/;
+                balls.ball[i].d = BallPoolDef.BALL_CUSHION3_D();
+                balls.ball[i].v = Vect.vec_null;
+                balls.ball[i].w = Vect.vec_null;
+                balls.ball[i].w2 = Vect.vec_null;
+
+                /*
+                balls.ball[i].b[0] = Vect.vec_unit(new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot)));
+                vdummy = new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot));
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+                */
+                balls.ball[i].b[0] = new Vect(1.0f, 0.0f, 0.0f);
+                vdummy = new Vect(0.0f, 0.0f, -1.0f);
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+
+                balls.ball[i].nr = i;
+                balls.ball[i].in_game = true;
+                balls.ball[i].in_hole = 0;
+                balls.ball[i].in_hole_store = 0;
+                balls.ball[i].in_outlet = 1;
+            }
+
+            dball1 = Vect.vec_scale(new Vect(-0.5f, 0.5f * Math.Sqrt(3.0f), 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_CUSHION3_D());
+            dball2 = Vect.vec_scale(new Vect(1.0f, 0.0f, 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_CUSHION3_D());
+
+            if (randomRoll)
+            {
+                balls.ball[0].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X + balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[1].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X - balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[2].r = new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y + balls.ball[0].d * 1.10f, 0.0f);
+            }
+            else
+            {
+                balls.ball[0].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X + balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[1].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X - balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[2].r = new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.FIRST_BALL_INIT_Y, 0.0f);
+            }
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                // balls.ball[i].path = 0;
+                balls.ball[i].pathcnt = 0;
+                balls.ball[i].pathsize = 0;
+                balls.ball[i].ballcollicnt = 0;
+                balls.ball[i].wallcnt = 0;
+            }
+
+            BallPhysic.simulation_mode(false, false);
+        }
+
+        private void Create4Ball(int randomSeed, bool randomRoll)
+        {
+            Vect dball1, dball2, vdummy;
+            //    double poserr=0.002;
+            double poserr = 0.007f;
+
+            balls.gametype = PhysicGameType.GAME_4BALL;
+
+            /* balls */
+            balls.nr = BallPoolDef.BALL_4_NUM;
+            balls.ball = new BallType[BallPoolDef.BALL_4_NUM];
+            for (int i = 0; i < BallPoolDef.BALL_4_NUM; i++)
+                balls.ball[i] = new BallType();
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].m = BallPoolDef.BALL_CUSHION3_M();
+                /* I_kugel = (m.r^2)2/5 = (m.d^2)/10 */
+                balls.ball[i].I = BallPoolDef.BALL_CUSHION3_M() * BallPoolDef.BALL_CUSHION3_D() * BallPoolDef.BALL_CUSHION3_D() / 10.0f /**0.01*/;
+                balls.ball[i].d = BallPoolDef.BALL_CUSHION3_D();
+                balls.ball[i].v = Vect.vec_null;
+                balls.ball[i].w = Vect.vec_null;
+                balls.ball[i].w2 = Vect.vec_null;
+
+                /*
+                balls.ball[i].b[0] = Vect.vec_unit(new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot)));
+                vdummy = new Vect(Random.Range(0, random_rot), Random.Range(0, random_rot), Random.Range(0, random_rot));
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+                */
+                balls.ball[i].b[0] = new Vect(1.0f, 0.0f, 0.0f);
+                vdummy = new Vect(0.0f, 0.0f, -1.0f);
+                balls.ball[i].b[1] = Vect.vec_unit(Vect.vec_diff(vdummy, Vect.vec_proj(vdummy, balls.ball[i].b[0])));
+                balls.ball[i].b[2] = Vect.vec_cross(balls.ball[i].b[0], balls.ball[i].b[1]);
+
+                balls.ball[i].nr = i;
+                balls.ball[i].in_game = true;
+                balls.ball[i].in_hole = 0;
+                balls.ball[i].in_hole_store = 0;
+                balls.ball[i].in_outlet = 1;
+            }
+
+            dball1 = Vect.vec_scale(new Vect(-0.5f, 0.5f * Math.Sqrt(3.0f), 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_CUSHION3_D());
+            dball2 = Vect.vec_scale(new Vect(1.0f, 0.0f, 0.0f), (1.0f + 2.0f * poserr) * BallPoolDef.BALL_CUSHION3_D());
+
+            if (randomRoll)
+            {
+                balls.ball[0].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X + balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[1].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X - balls.ball[0].d * 0.55f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[2].r = new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y + balls.ball[0].d * 1.10f, 0.0f);
+                balls.ball[3].r = new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y - balls.ball[0].d * 1.10f, 0.0f);
+            }
+            else
+            {
+                balls.ball[0].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X + balls.ball[0].d * 0.75f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[2].r = new Vect(BallPoolDef.QUEUE_BALL_INIT_X - balls.ball[0].d * 0.75f, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+                balls.ball[3].r = new Vect(BallPoolDef.FIRST_BALL_INIT_X, BallPoolDef.FIRST_BALL_INIT_Y, 0.0f);
+                balls.ball[1].r = new Vect(BallPoolDef.SECOND_BALL_INIT_X, BallPoolDef.SECOND_BALL_INIT_Y, 0.0f);
+            }
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                // balls.ball[i].path = 0;
+                balls.ball[i].pathcnt = 0;
+                balls.ball[i].pathsize = 0;
+                balls.ball[i].ballcollicnt = 0;
+                balls.ball[i].wallcnt = 0;
+            }
+
+            BallPhysic.simulation_mode(false, false);
+        }
+
+
+        private void Create6HoleWalls()
+        {
+            /* borders */
+            walls.nr = 32;
+            walls.border = new BorderType[walls.nr];
+            for (int i = 0; i < walls.nr; i++)
+                walls.border[i] = new BorderType();
+
+            // bonds
+
+            // float sqrtValue = 2.0f;
+            float sqrtValue = 3.0f;
+
+            // BallPool8 => 오른쪽 하단.
+            walls.border[0].pnr = 3;
+            walls.border[0].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[0].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, 0.0f);
+            walls.border[0].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[0].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[1].pnr = 3;
+            walls.border[1].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[1].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, 0.0f);
+            walls.border[1].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[1].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[2].pnr = 3;
+            walls.border[2].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[2].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE1_W() / 2.0f, 0.0f);
+            walls.border[2].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[2].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[3].pnr = 3;
+            walls.border[3].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[3].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, 0.0f);
+            walls.border[3].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[3].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[4].pnr = 3;
+            walls.border[4].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[4].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[4].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[4].n = new Vect(0.0f, -1.0f, 0.0f);
+
+            walls.border[5].pnr = 3;
+            walls.border[5].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[5].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[5].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[5].n = new Vect(0.0f, +1.0f, 0.0f);
+
+
+            /* edges */
+
+            /* cotan(35 */
+            double corner_hole_offset = BallPoolDef.HOLE1_TAN_B;
+
+            // upper right
+            walls.border[6].pnr = 2;
+            walls.border[6].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[6].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, +BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[18].pnr = 3;
+            walls.border[18].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[18].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[18].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + corner_hole_offset, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) + BallPoolDef.HOLE1_TAN, 0.0f);
+            walls.border[18].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[18].r2, walls.border[18].r1), Vect.vec_diff(walls.border[18].r3, walls.border[18].r1)));
+
+            // upper right
+            walls.border[7].pnr = 2;
+            walls.border[7].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[7].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[19].pnr = 3;
+            walls.border[19].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[19].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[19].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) + BallPoolDef.HOLE1_TAN, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f + corner_hole_offset, 0.0f);
+            walls.border[19].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[19].r1, walls.border[19].r2), Vect.vec_diff(walls.border[19].r3, walls.border[19].r1)));
+
+            // upper left
+            walls.border[8].pnr = 2;
+            walls.border[8].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[8].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[20].pnr = 3;
+            walls.border[20].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[20].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[20].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - corner_hole_offset, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) + BallPoolDef.HOLE1_TAN, 0.0f);
+            walls.border[20].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[20].r1, walls.border[20].r2), Vect.vec_diff(walls.border[20].r3, walls.border[20].r1)));
+
+            // upper left 
+            walls.border[9].pnr = 2;
+            walls.border[9].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[9].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[21].pnr = 3;
+            walls.border[21].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[21].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[21].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) - BallPoolDef.HOLE1_TAN, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f + corner_hole_offset, 0.0f);
+            walls.border[21].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[21].r2, walls.border[21].r1), Vect.vec_diff(walls.border[21].r3, walls.border[21].r1)));
+
+            // lower right
+            walls.border[10].pnr = 2;
+            walls.border[10].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[10].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[22].pnr = 3;
+            walls.border[22].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[22].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[22].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + corner_hole_offset, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) - BallPoolDef.HOLE1_TAN, 0.0f);
+            walls.border[22].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[22].r1, walls.border[22].r2), Vect.vec_diff(walls.border[22].r3, walls.border[22].r1)));
+
+            // lower right
+            walls.border[11].pnr = 2;
+            walls.border[11].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[11].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[23].pnr = 3;
+            walls.border[23].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[23].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[23].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) + BallPoolDef.HOLE1_TAN, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f - corner_hole_offset, 0.0f);
+            walls.border[23].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[23].r2, walls.border[23].r1), Vect.vec_diff(walls.border[23].r3, walls.border[23].r1)));
+
+            // lower left
+            walls.border[12].pnr = 2;
+            walls.border[12].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[12].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[24].pnr = 3;
+            walls.border[24].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), -BallPoolDef.BALL_D / 2.0f);
+            walls.border[24].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.BALL_D / 2.0f);
+            walls.border[24].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - corner_hole_offset, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) - BallPoolDef.HOLE1_TAN, 0.0f);
+            walls.border[24].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[24].r2, walls.border[24].r1), Vect.vec_diff(walls.border[24].r3, walls.border[24].r1)));
+
+            // lower left 
+            walls.border[13].pnr = 2;
+            walls.border[13].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[13].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[25].pnr = 3;
+            walls.border[25].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[25].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[25].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_W() / Math.Sqrt(sqrtValue) - BallPoolDef.HOLE1_TAN, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f - corner_hole_offset, 0.0f);
+            walls.border[25].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[25].r1, walls.border[25].r2), Vect.vec_diff(walls.border[25].r3, walls.border[25].r1)));
+
+            // middle left
+            walls.border[14].pnr = 2;
+            walls.border[14].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[14].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[26].pnr = 3;
+            walls.border[26].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[26].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[26].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - 1.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f - BallPoolDef.HOLE2_TAN, 0.0f);
+            walls.border[26].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[26].r2, walls.border[26].r1), Vect.vec_diff(walls.border[26].r3, walls.border[26].r1)));
+
+            // middle left 
+            walls.border[15].pnr = 2;
+            walls.border[15].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[15].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[27].pnr = 3;
+            walls.border[27].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[27].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[27].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - 1.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f + BallPoolDef.HOLE2_TAN, 0.0f);
+            walls.border[27].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[27].r1, walls.border[27].r2), Vect.vec_diff(walls.border[27].r3, walls.border[27].r1)));
+
+            // middle right 
+            walls.border[16].pnr = 2;
+            walls.border[16].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[16].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[28].pnr = 3;
+            walls.border[28].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[28].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[28].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + 1.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.HOLE2_W() / 2.0f - BallPoolDef.HOLE2_TAN, 0.0f);
+            walls.border[28].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[28].r1, walls.border[28].r2), Vect.vec_diff(walls.border[28].r3, walls.border[28].r1)));
+
+            // middle right 
+            walls.border[17].pnr = 2;
+            walls.border[17].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[17].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[29].pnr = 3;
+            walls.border[29].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[29].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[29].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + 1.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.HOLE2_W() / 2.0f + BallPoolDef.HOLE2_TAN, 0.0f);
+            walls.border[29].n = Vect.vec_unit(Vect.vec_cross(Vect.vec_diff(walls.border[29].r2, walls.border[29].r1), Vect.vec_diff(walls.border[29].r3, walls.border[29].r1)));
+
+
+            /* friction constants and loss factors */
+            for (int i = 0; i < walls.nr; i++)
+            {
+                //walls.border[i].mu          = 0.1f;
+                // hy HyungSuk
+                //walls.border[i].loss0       = 0.2f;
+                //walls.border[i].loss_max    = 0.5f;
+                //walls.border[i].loss_wspeed = 4.0f;  /* [m/s] */
+
+                /*
+                walls.border[i].mu = 0.1f;
+                walls.border[i].vsw = 0.00f;
+                walls.border[i].loss0 = 0.3f;
+                walls.border[i].loss_max = 0.6f;
+                walls.border[i].loss_wspeed = 5.0f;  
+                 * */
+
+                walls.border[i].mu = 0.3f;
+                walls.border[i].loss0 = 0.3f;
+                walls.border[i].loss_max = 0.6f;
+                walls.border[i].loss_wspeed = 2.0f;
+            }
+
+            /* table surface */
+
+            walls.border[30].pnr = 3;
+            walls.border[30].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[30].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[30].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[30].n = new Vect(0.0f, 0.0f, 1.0f);
+
+            walls.border[31].pnr = 3;
+            walls.border[31].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[31].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[31].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f - 0.0001f);
+            walls.border[31].n = new Vect(0.0f, 0.0f, 1.0f);
+
+            walls.border[30].mu = 0.2f;
+            walls.border[30].loss0 = 0.6f;
+            walls.border[30].loss_max = 0.99f;
+            walls.border[30].loss_wspeed = 1.5f;
+            walls.border[31].mu = 0.2f;
+            walls.border[31].loss0 = 0.6f;
+            walls.border[31].loss_max = 0.99f;
+            walls.border[31].loss_wspeed = 1.5f;
+
+            /* holes */
+            walls.holenr = 6;
+            walls.hole = new HoleType[walls.holenr];
+            for (int i = 0; i < walls.holenr; i++)
+                walls.hole[i] = new HoleType();
+
+            /* middle right */
+            walls.hole[0].aim = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE2_AIMOFFS, BallPoolDef.TABLE_INIT_Y + 0.0f, 0.0f);
+            walls.hole[0].pos = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE2_XYOFFS(), BallPoolDef.TABLE_INIT_Y + 0.0f, 0.0f);
+            walls.hole[0].open_dir = Vect.vec_unit(new Vect(-1.0f, 0.0f, 0.0f));
+            walls.hole[0].r = BallPoolDef.HOLE2_R;
+            /* middle left */
+            walls.hole[1].aim = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE2_AIMOFFS, BallPoolDef.TABLE_INIT_Y + 0.0f, 0.0f);
+            walls.hole[1].pos = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE2_XYOFFS(), BallPoolDef.TABLE_INIT_Y + 0.0f, 0.0f);
+            walls.hole[1].open_dir = Vect.vec_unit(new Vect(1.0f, 0.0f, 0.0f));
+            walls.hole[1].r = BallPoolDef.HOLE2_R;
+            /* upper right */
+            walls.hole[2].aim = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_AIMOFFS, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_AIMOFFS, 0.0f);
+            walls.hole[2].pos = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_XOFFS(), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_YOFFS(), 0.0f);
+            walls.hole[2].open_dir = Vect.vec_unit(new Vect(-1.0f, -1.0f, 0.0f));
+            walls.hole[2].r = BallPoolDef.HOLE1_R;
+            /* upper left */
+            walls.hole[3].aim = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_AIMOFFS, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_AIMOFFS, 0.0f);
+            walls.hole[3].pos = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_XOFFS(), BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_YOFFS(), 0.0f);
+            walls.hole[3].open_dir = Vect.vec_unit(new Vect(1.0f, -1.0f, 0.0f));
+            walls.hole[3].r = BallPoolDef.HOLE1_R;
+            /* lower left */
+            walls.hole[4].aim = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_AIMOFFS, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_AIMOFFS, 0.0f);
+            walls.hole[4].pos = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_XOFFS(), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_YOFFS(), 0.0f);
+            walls.hole[4].open_dir = Vect.vec_unit(new Vect(1.0f, 1.0f, 0.0f));
+            walls.hole[4].r = BallPoolDef.HOLE1_R;
+            /* lower right */
+            walls.hole[5].aim = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f - BallPoolDef.HOLE1_AIMOFFS, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f + BallPoolDef.HOLE1_AIMOFFS, 0.0f);
+            walls.hole[5].pos = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f + BallPoolDef.HOLE1_XOFFS(), BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f - BallPoolDef.HOLE1_YOFFS(), 0.0f);
+            walls.hole[5].open_dir = Vect.vec_unit(new Vect(-1.0f, 1.0f, 0.0f));
+            walls.hole[5].r = BallPoolDef.HOLE1_R;
+        }
+
+        private void Create3CushionWalls()
+        {
+            /* borders */
+            walls.nr = 6;
+            walls.border = new BorderType[walls.nr];
+            for (int i = 0; i < walls.nr; i++)
+                walls.border[i] = new BorderType();
+
+            // float sqrtValue = 2.0f;
+            double sqrtValue = 3.0f;
+
+            // 오른쪽 하단.
+            walls.border[0].nr = 1;
+            walls.border[0].pnr = 3;
+            walls.border[0].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[0].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[0].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[0].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[1].nr = 1;
+            walls.border[1].pnr = 3;
+            walls.border[1].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[1].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[1].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[1].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[2].nr = 2;
+            walls.border[2].pnr = 3;
+            walls.border[2].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[2].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[2].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[2].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[3].nr = 2;
+            walls.border[3].pnr = 3;
+            walls.border[3].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[3].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[3].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[3].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[4].nr = 3;
+            walls.border[4].pnr = 3;
+            walls.border[4].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[4].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[4].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[4].n = new Vect(0.0f, -1.0f, 0.0f);
+
+            walls.border[5].nr = 4;
+            walls.border[5].pnr = 3;
+            walls.border[5].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[5].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[5].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[5].n = new Vect(0.0f, +1.0f, 0.0f);
+
+            /*
+            // 오른쪽 하단.
+            walls.border[0].nr = 1;
+            walls.border[0].pnr = 3;
+            walls.border[0].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[0].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[0].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[0].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[1].nr = 1;
+            walls.border[1].pnr = 3;
+            walls.border[1].r1 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[1].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[1].r3 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[1].n = new Vect(-1.0f, 0.0f, 0.0f);
+
+            walls.border[2].nr = 2;
+            walls.border[2].pnr = 3;
+            walls.border[2].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[2].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[2].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[2].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[3].nr = 2;
+            walls.border[3].pnr = 3;
+            walls.border[3].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[3].r2 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y, 0.0f);
+            walls.border[3].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[3].n = new Vect(+1.0f, 0.0f, 0.0f);
+
+            walls.border[4].nr = 3;
+            walls.border[4].pnr = 3;
+            walls.border[4].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[4].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[4].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y + BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[4].n = new Vect(0.0f, -1.0f, 0.0f);
+
+            walls.border[5].nr = 4;
+            walls.border[5].pnr = 3;
+            walls.border[5].r1 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, -BallPoolDef.BALL_D / 2.0f);
+            walls.border[5].r2 = new Vect(BallPoolDef.TABLE_INIT_X + BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, 0.0f);
+            walls.border[5].r3 = new Vect(BallPoolDef.TABLE_INIT_X - BallPoolDef.TABLE_W / 2.0f, BallPoolDef.TABLE_INIT_Y - BallPoolDef.TABLE_L / 2.0f, BallPoolDef.BALL_D / 2.0f);
+            walls.border[5].n = new Vect(0.0f, +1.0f, 0.0f);
+             * */
+
+
+            /* friction constants and loss factors */
+            for (int i = 0; i < walls.nr; i++)
+            {
+                walls.border[i].mu = 0.30f;
+                // hy HyungSuk
+                // walls.border[i].loss0       = 0.2f;
+                // walls.border[i].loss_max    = 0.5f;
+                // walls.border[i].loss_wspeed = 4.0f;  /* [m/s] */
+
+                // walls.border[i].loss0 = 0.2f;
+                // walls.border[i].loss_max = 0.5f;
+                // walls.border[i].loss_wspeed = 2.0f;  /* [m/s] */          
+
+                walls.border[i].loss0 = 0.3f;
+                walls.border[i].loss_max = 0.6f;
+                walls.border[i].loss_wspeed = 2.0f;  /* [m/s] */
+            }
+
+            /* holes */
+            walls.holenr = 0;
+        }
+
+        private void InitFreeBallArea()
+        {
+            double scale_tb_offset = 0.997f;
+            double scale_lf_offset = 0.99f;
+
+            breakBallArea.left = BallPoolDef.TABLE_INIT_X - (BallPoolDef.TABLE_W / 2.0f) * scale_lf_offset;
+            breakBallArea.right = BallPoolDef.TABLE_INIT_X + (BallPoolDef.TABLE_W / 2.0f) * scale_lf_offset;
+            breakBallArea.top = BallPoolDef.QUEUE_BALL_INIT_Y;
+            breakBallArea.bottom = BallPoolDef.TABLE_INIT_Y - (BallPoolDef.TABLE_L / 2.0f) * scale_tb_offset;
+
+            freeBallArea.left = BallPoolDef.TABLE_INIT_X - (BallPoolDef.TABLE_W / 2.0f) * scale_lf_offset;
+            freeBallArea.right = BallPoolDef.TABLE_INIT_X + (BallPoolDef.TABLE_W / 2.0f) * scale_lf_offset;
+            freeBallArea.top = BallPoolDef.TABLE_INIT_Y + (BallPoolDef.TABLE_L / 2.0f) * scale_tb_offset;
+            freeBallArea.bottom = BallPoolDef.TABLE_INIT_Y - (BallPoolDef.TABLE_L / 2.0f) * scale_tb_offset;
+
+            double valid_scale_tb_offset = 1.001f;
+            double valid_scale_lf_offset = 1.001f;
+
+            validBallArea.left = BallPoolDef.TABLE_INIT_X - (BallPoolDef.TABLE_W / 2.0f) * valid_scale_lf_offset;
+            validBallArea.right = BallPoolDef.TABLE_INIT_X + (BallPoolDef.TABLE_W / 2.0f) * valid_scale_lf_offset;
+            validBallArea.top = BallPoolDef.TABLE_INIT_Y + (BallPoolDef.TABLE_L / 2.0f) * valid_scale_tb_offset;
+            validBallArea.bottom = BallPoolDef.TABLE_INIT_Y - (BallPoolDef.TABLE_L / 2.0f) * valid_scale_tb_offset;
+        }
+
+        private void InitFooPhysicToUnity()
+        {
+            if (AGGameManager.Instant != null)
+            {
+                for (int i = 0; i < balls.nr; i++)
+                {
+                    AGGameManager.Instant.SetBallPostion(i, balls.ball[i]);
+                }
+            }
+        }
+                
+        private void FixedUpdateSU()
+        {
+            if (is_simulation == false)
+                return;
+
+            // simulation update                
+            Time.timeScale = 1.0f;
+            Time.fixedDeltaTime = 0.02f;
+
+            // foo 물리 엔진 fixed time.
+            double ADJUST_DELTA_TIME = 1.0f;
+            double FOO_TIMESTEP = 0.0075f * ADJUST_DELTA_TIME;
+
+            double adjustTime = 1.0f; // Time.fixedDeltaTime / 0.02f / Time.timeScale;
+            double FOO_TIMESTEP_SCALE = FOO_TIMESTEP * adjustTime;
+
+            bool isCalc = true;
+            bool isBallRun = false;
+
+            int simul_ability_count = PAM.Instant.GetAbilityCushion3Aim(simul_stat_aim, simul_char_stat_aim);
+            int simul_maxaim = PAM.Instant.GetC3_MaxTotalAim();
+            if (simul_ability_count > simul_maxaim) 
+                simul_ability_count = simul_maxaim;
+
+            int simul_eac = simul_stat_extra_aim_count;
+            if (simul_eac > 4) simul_eac = 4;
+
+            if (simul_active_count > simul_ability_count + simul_eac)
+                return;
+
+            bool isNL = AGGameManager.Instant.isTNL();
+
+            while (isCalc)
+            {
+                BallPhysic.proceed_dt(simul_balls, walls, FOO_TIMESTEP_SCALE, proceed_tick_num);
+                if (BallPhysic.first_collision_ball_id() > 0)
+                    BallPhysic.break_shot_off();
+
+                proceed_tick_num++;
+                BallPhysic.proceed_dt_3cushion_wall_deltatime(simul_balls, FOO_TIMESTEP_SCALE);
+
+                isBallRun = false;
+
+                if (isNL == true)
+                    isCalc = false;
+                
+                for (int i = 0; i < simul_balls.nr; i++)
+                {
+                    if (simul_balls.ball[i].in_game == true)
+                    {
+                        if (simul_balls.ball[i].v.x != 0.0f || simul_balls.ball[i].v.y != 0.0f || simul_balls.ball[i].v.z != 0.0f)
+                        {
+                            isBallRun = true;
+                            break;
+                        }
+                    }
+                }
+
+                bool isCaleSimulCount = false;
+
+                if (BallPhysic.first_collision_ball_id() >= 0 || BallPhysic.is_queball_first_wall_collision())
+                {
+                    isCaleSimulCount = true;
+                }
+
+                if (isCaleSimulCount)
+                {
+                    bool wallColli = false;
+
+                    if (simul_wall_colli_count != simul_balls.ball[cueBallIndex].wallcnt)
+                    {
+                        wallColli = true;
+                        simul_wall_colli_count = simul_balls.ball[cueBallIndex].wallcnt;
+                    }
+
+                    if (simul_active_count >= simulDataList.Count)
+                    {
+                        SimulBallData simulData = new SimulBallData();
+                        simulData.wall_colli = wallColli;
+                        simulData.r.Set(simul_balls.ball[cueBallIndex].r.x, simul_balls.ball[cueBallIndex].r.y, 0.0f);
+                        simulDataList.Add(simulData);
+                    }
+                    else
+                    {
+                        simulDataList[simul_active_count].wall_colli = wallColli;
+                        simulDataList[simul_active_count].r.Set(simul_balls.ball[cueBallIndex].r.x, simul_balls.ball[cueBallIndex].r.y, 0.0f);
+                    }
+
+                    simul_active_count++;
+                }
+
+                if (isBallRun == false)
+                {
+                    AdjustSimulBallData(simul_active_count);
+
+                    simul_extra_active_count = simul_active_count - simul_ability_count;
+                    if (simul_extra_active_count < 0)
+                        simul_extra_active_count = 0;
+
+                    isCalc = false;
+                }
+
+                if (simul_active_count > simul_ability_count + simul_eac)
+                {
+                    AdjustSimulBallData(simul_active_count);
+
+                    simul_extra_active_count = simul_active_count - simul_ability_count - 1;
+                    if (simul_extra_active_count < 0)
+                        simul_extra_active_count = 0;
+
+                    isCalc = false;
+                }
+            }
+
+            xCirP.Update();
+        }
+
+        private void FixedUpdateCustom()
+        {
+            // foo 물리 엔진 fixed time.
+            double ADJUST_DELTA_TIME = 1.0f;
+            double FOO_TIMESTEP = 0.0075f * ADJUST_DELTA_TIME;
+
+            /*
+            // unity fixed time으로 변환.
+            double defaultFixedTime = 0.02f;
+            double fixedTimeScale = Time.fixedDeltaTime / defaultFixedTime;
+            double FOO_TIMESTEP_SCALE = FOO_TIMESTEP * fixedTimeScale;
+            */
+
+            double adjustTime = 1.0f; // Time.fixedDeltaTime / 0.02f / Time.timeScale;
+            double FOO_TIMESTEP_SCALE = FOO_TIMESTEP * adjustTime;
+
+            if (!updatePause)
+            {
+                BallPhysic.proceed_dt(balls, walls, FOO_TIMESTEP_SCALE, proceed_tick_num);
+
+                if (BallPhysic.first_collision_ball_id() > 0)
+                    BallPhysic.break_shot_off();
+
+                proceed_tick_num++;
+            }
+
+            ATCkManager.Instant.XGuardU(0);
+
+            if (gameType == PhysicGameType.GAME_8BALL)
+            {
+                BallPhysic.proceed_dt_holein_outlet(balls, walls, FOO_TIMESTEP_SCALE);
+            }
+            else
+            {
+                BallPhysic.proceed_dt_3cushion_wall_deltatime(balls, FOO_TIMESTEP_SCALE);
+            }
+        }
+
+        private void AdjustSimulBallData(int active_count)
+        {
+            if (active_count <= 1)
+                return;
+
+            Vect prevDir = Vect.vec_null;
+
+            for (int i = 0; i < active_count; i++)
+            {
+                int prev_active_index = i;
+                int curr_active_index = i + 1;
+                if (curr_active_index >= active_count)
+                    return;
+
+                Vect diff = simulDataList[curr_active_index].r - simulDataList[prev_active_index].r;
+                diff.z = 0.0f;
+                diff.Normalize();
+
+                double max_dist = PAM.Instant.GetC3_MaxDistAimCircle();
+                double dist = (double)Vect.Distance(simulDataList[curr_active_index].r, simulDataList[prev_active_index].r);
+
+                if (simulDataList[curr_active_index].wall_colli)
+                {
+                    if (prev_active_index > 0 && dist > max_dist + 0.01f)
+                    {
+                        for (int j = active_count - 1; j >= curr_active_index + 1; j--)
+                        {
+                            simulDataList[j].wall_colli = simulDataList[j - 1].wall_colli;
+                            simulDataList[j].r = simulDataList[j - 1].r;
+                        }
+
+                        simulDataList[curr_active_index].wall_colli = false;
+                        if (prevDir != Vect.vec_null)
+                            simulDataList[curr_active_index].r = Vect.vec_add(simulDataList[prev_active_index].r, Vect.vec_scale(prevDir, max_dist));
+                        else
+                            simulDataList[curr_active_index].r = Vect.vec_add(simulDataList[prev_active_index].r, Vect.vec_scale(diff, max_dist));
+                    }
+                }
+                else
+                {
+                    if (dist > max_dist)
+                    {
+                        simulDataList[curr_active_index].r = Vect.vec_add(simulDataList[prev_active_index].r, Vect.vec_scale(diff, max_dist));
+                    }
+
+                    prevDir = diff;
+                }
+            }
+        }
+
+
+
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Public Function.
+        #region ( Public Function)
+
+        public void ShowAllBalls(bool visible)
+        {
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].in_game = visible;
+            }
+
+            UpdateBallVisual();
+        }
+
+        public void UpdateBallVisual()
+        {
+            if (AGGameManager.Instant != null)
+            {
+                // 좌표 전달...
+                for (int i = 0; i < balls.nr; i++)
+                {
+                    AGGameManager.Instant.SetBallPostion(i, balls.ball[i]);
+                    AGGameManager.Instant.SetBallRotate(i, balls.ball[i]);
+                }
+
+                if (AGTableManager.Instant != null)
+                    AGTableManager.Instant.UpdateShadowPosition();
+                if (BallStrokeUI.Instant != null)
+                    BallStrokeUI.Instant.UpdateStrokePosition();
+            }
+        }
+
+        public void Begin3CushionRandomRoll(int randomSeed)
+        {
+            SimpleRandom simpleRandom = new SimpleRandom();
+            simpleRandom.seed(randomSeed);
+
+            double standardDirX = (simpleRandom.rand() % 2000 - 1000) / 1000.0;
+            double standardDirY = (simpleRandom.rand() % 2000) / 1000.0 + 0.3;
+            double standardPower = (simpleRandom.rand() % 2000 - 1000) / 1000.0 + 4.0;
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                double ballDirX = standardDirX + (simpleRandom.rand() % 200 - 100) / 300.0;
+                double ballDirY = standardDirY + (simpleRandom.rand() % 100) / 300.0;
+                Vect ballDir = new Vect(ballDirX, ballDirY, 0.0);
+                ballDir = Vect.vec_unit(ballDir);
+
+                double ballPower = (simpleRandom.rand() % 10) / 100.0f + standardPower;
+                balls.ball[i].v = Vect.vec_scale(ballDir, ballPower);
+            }
+
+            // udpate pause...
+            SetUpdatePause(false);
+        }
+
+        public void BeginBall4RandomRoll(int randomSeed)
+        {
+            SimpleRandom simpleRandom = new SimpleRandom();
+            simpleRandom.seed(randomSeed);
+
+            float standardDirX = (float)(simpleRandom.rand() % 2000 - 1000) / 1000.0f;
+            float standardDirY = (float)(simpleRandom.rand() % 2000) / 1000.0f + 0.3f;
+            float standardPower = (float)(simpleRandom.rand() % 2000 - 1000) / 1000.0f + 4.0f;
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                float ballDirX = standardDirX + (float)(simpleRandom.rand() % 200 - 100) / 300.0f;
+                float ballDirY = standardDirY + (float)(simpleRandom.rand() % 100) / 300.0f;
+                Vect ballDir = new Vect(ballDirX, ballDirY, 0.0f);
+                ballDir = Vect.vec_unit(ballDir);
+
+                float ballPower = (float)(simpleRandom.rand() % 10) / 100.0f + standardPower;
+                balls.ball[i].v = Vect.vec_scale(ballDir, ballPower);
+            }
+
+            // udpate pause...
+            SetUpdatePause(false);
+        }
+
+        public void SetUpdatePause(bool pause)
+        {
+            updatePause = pause;
+        }
+
+        public void SetForgroundPause(bool pause)
+        {
+            forgroundPause = pause;
+        }
+
+        public void QueueShot8Ball(bool breakShot, double queue_speed)
+        {
+            proceed_tick_num = 0;
+
+            SetUpdatePause(false);
+
+            if (breakShot) BallPhysic.break_shot();
+            else BallPhysic.break_shot_off();
+
+            // BallPhysic.break_shot_off();
+
+            BallPhysic.simulation_mode(false, false);
+            BallPhysic.reset_first_collision_ball_id();
+            BallPhysic.reset_queball_first_wall_collision();
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].ballcollicnt = 0;
+                balls.ball[i].wallcnt = 0;
+            }
+
+            // float queue_point_x = queue_spin_x * Mathf.Pow(queue_strength, 5);
+            double queue_point_x = queue_spin_x;
+            double queue_point_y = queue_spin_y;
+
+            double dir_x = Math.Sin((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_y = Math.Cos((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_z = Math.Cos((Xque * VMath.M_PI / 180.0f));
+
+            Vect dir = new Vect(dir_x, dir_y, dir_z);
+            Vect nx = Vect.vec_unit(Vect.vec_cross(Vect.vec_ez, dir));  /* parallel to table */
+            Vect ny = Vect.vec_unit(Vect.vec_cross(nx, dir));        /* orthogonal to dir and nx */
+            Vect hitpoint = Vect.vec_add(Vect.vec_scale(nx, queue_point_x), Vect.vec_scale(ny, queue_point_y));
+            Vect nospinx_hitpoint = Vect.vec_add(Vect.vec_scale(nx, 0.0f), Vect.vec_scale(ny, queue_point_y));
+
+
+            balls.ball[0].v = Vect.vec_scale(dir, -queue_speed * queue_strength);
+#if options_jump_shots
+#else
+            balls.ball[0].v.z = 0.0f;
+#endif
+
+            /*        balls.ball[CUE_BALL_IND].v.x =  -CUEBALL_MAXSPEED*queue_strength*sin(Xque*M_PI/180.0)*sin(Zque*M_PI/180.0);
+        balls.ball[CUE_BALL_IND].v.y =  -CUEBALL_MAXSPEED*queue_strength*sin(Xque*M_PI/180.0)*cos(Zque*M_PI/180.0);*/
+            //        balls.ball[0].w.x = -2.0/balls.ball[0].d/2.0*balls.ball[0].v.y;
+            //        balls.ball[0].w.y = +2.0/balls.ball[0].d/2.0*balls.ball[0].v.x;
+            //        balls.ball[0].w.z = -2.0/balls.ball[0].d/2.0;
+
+            balls.ball[0].w = Vect.vec_null;
+            balls.ball[0].w2 = Vect.vec_null;
+
+            if (Vect.vec_abssq(hitpoint) == 0.0f)
+            {
+                balls.ball[0].w = Vect.vec_null;
+                balls.ball[0].w2 = Vect.vec_null;
+            }
+            else
+            {
+                /* w = roll speed if hit 1/3of radius above center */
+                //            balls.ball[CUE_BALL_IND].w = vec_scale(vec_cross(dir,hitpoint),4.0*3.0*CUEBALL_MAXSPEED*queue_strength/balls.ball[CUE_BALL_IND].d/balls.ball[CUE_BALL_IND].d);
+                /* hmm, this one works better */
+
+                // by HyungSuk, Jang ( 2015.08.22 )
+                // balls.ball[0].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), 2.0f * 3.0f * queue_speed * queue_strength / balls.ball[0].d / balls.ball[0].d);
+
+                double final_spin_strength = 2.0 * queue_speed * queue_strength / balls.ball[0].d / balls.ball[0].d;
+                if (isMasseMode())
+                {
+                    final_spin_strength = final_spin_strength * PAM.Instant.GetMasseSpinWeight();
+                }
+
+                balls.ball[0].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), final_spin_strength);
+                balls.ball[0].w2 = Vect.vec_scale(Vect.vec_cross(dir, nospinx_hitpoint), final_spin_strength);
+            }
+
+            BallPhysic.set_cutshot_value(cutshot_value);
+            BallPhysic.set_whiteball_fcv(whiteBallFCV);
+
+            // reset offset parameters
+            queue_point_x = 0.0f;
+            queue_point_y = 0.0f;
+            SetWhiteBallFCV(Vect.vec_null);
+
+            is_simulation = false;
+        }
+
+        public void QueueShot3Cushion(double queue_speed)
+        {
+            proceed_tick_num = 0;
+
+            SetUpdatePause(false);
+
+            BallPhysic.reset_first_collision_ball_id();
+            BallPhysic.reset_queball_first_wall_collision();
+            BallPhysic.clear_3chushion_event();
+            BallPhysic.simulation_mode(false, false);
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                balls.ball[i].ballcollicnt = 0;
+                balls.ball[i].wallcnt = 0;
+                balls.ball[i].final_wall_id = -1;
+                balls.ball[i].final_wall_deltatime = 0.0f;
+            }
+
+            // float queue_point_x = queue_spin_x * Mathf.Pow(queue_strength, 5);
+            double queue_point_x = queue_spin_x;
+            double queue_point_y = queue_spin_y;
+            double dir_x = Math.Sin((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_y = Math.Cos((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_z = Math.Cos((Xque * VMath.M_PI / 180.0f));
+
+            Vect dir = new Vect(dir_x, dir_y, dir_z);
+            Vect nx = Vect.vec_unit(Vect.vec_cross(Vect.vec_ez, dir));  /* parallel to table */
+            Vect ny = Vect.vec_unit(Vect.vec_cross(nx, dir));        /* orthogonal to dir and nx */
+            Vect hitpoint = Vect.vec_add(Vect.vec_scale(nx, queue_point_x), Vect.vec_scale(ny, queue_point_y));
+            Vect nospinx_hitpoint = Vect.vec_add(Vect.vec_scale(nx, 0.0f), Vect.vec_scale(ny, queue_point_y));
+
+            balls.ball[cueBallIndex].v = Vect.vec_scale(dir, -queue_speed * queue_strength);
+
+#if options_jump_shots
+#else
+            balls.ball[cueBallIndex].v.z = 0.0f;
+#endif
+
+            // balls.ball[cueBallIndex].v = Vect.vec_null;
+
+            /*        balls.ball[CUE_BALL_IND].v.x =  -CUEBALL_MAXSPEED*queue_strength*sin(Xque*M_PI/180.0)*sin(Zque*M_PI/180.0);
+            balls.ball[CUE_BALL_IND].v.y =  -CUEBALL_MAXSPEED*queue_strength*sin(Xque*M_PI/180.0)*cos(Zque*M_PI/180.0);*/
+            //        balls.ball[0].w.x = -2.0/balls.ball[0].d/2.0*balls.ball[0].v.y;
+            //        balls.ball[0].w.y = +2.0/balls.ball[0].d/2.0*balls.ball[0].v.x;
+            //        balls.ball[0].w.z = -2.0/balls.ball[0].d/2.0;
+
+            balls.ball[cueBallIndex].w = Vect.vec_null;
+            balls.ball[cueBallIndex].w2 = Vect.vec_null;
+
+            if (Vect.vec_abssq(hitpoint) == 0.0f)
+            {
+                balls.ball[cueBallIndex].w = Vect.vec_null;
+                balls.ball[cueBallIndex].w2 = Vect.vec_null;
+            }
+            else
+            {
+                /* w = roll speed if hit 1/3of radius above center */
+                //            balls.ball[CUE_BALL_IND].w = vec_scale(vec_cross(dir,hitpoint),4.0*3.0*CUEBALL_MAXSPEED*queue_strength/balls.ball[CUE_BALL_IND].d/balls.ball[CUE_BALL_IND].d);
+                /* hmm, this one works better */
+
+                // by HyungSuk, Jang ( 2015.08.22 )
+                // balls.ball[0].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), 2.0f * 3.0f * queue_speed * queue_strength / balls.ball[0].d / balls.ball[0].d);
+                //balls.ball[0].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), 2.0f * queue_speed * queue_strength / balls.ball[0].d / balls.ball[0].d);
+                //balls.ball[0].w2 = Vect.vec_scale(Vect.vec_cross(dir, nospinx_hitpoint), 2.0f * queue_speed * queue_strength / balls.ball[0].d / balls.ball[0].d);
+
+                double turning_queue_strength = queue_strength + 0.2f;
+                if (turning_queue_strength > 1.0f)
+                    turning_queue_strength = 1.0f;
+
+                double final_spin_strength = 2.0f * queue_speed * turning_queue_strength / balls.ball[0].d / balls.ball[0].d;
+                if (isMasseMode())
+                {
+                    final_spin_strength = final_spin_strength * PAM.Instant.GetMasseSpinWeight();
+                }
+
+                balls.ball[cueBallIndex].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), final_spin_strength);
+                balls.ball[cueBallIndex].w2 = Vect.vec_scale(Vect.vec_cross(dir, nospinx_hitpoint), final_spin_strength);
+            }
+
+            BallPhysic.set_cutshot_value(cutshot_value);
+            BallPhysic.set_whiteball_fcv(whiteBallFCV);
+            BallPhysic.add_init_ball_event(balls.ball[cueBallIndex], queue_spin_x, queue_spin_y);
+
+            // reset offset parameters
+            queue_point_x = 0.0f;
+            queue_point_y = 0.0f;
+            SetWhiteBallFCV(Vect.vec_null);
+
+            is_simulation = false;
+        }
+
+        public Vect SimulSecondBallVelocity(Vect firstBallPos, int secondBallIndex, ref Vect firstBallDir, ref Vect secondBallDir, double cuePower, double queueBallSpeed)
+        {
+            double dir_x = Math.Sin((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_y = Math.Cos((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_z = Math.Cos((Xque * VMath.M_PI / 180.0f));
+            Vect dir = new Vect(dir_x, dir_y, dir_z);
+
+            // Vect firstVelocity = Vect.vec_scale(dir, -BallPoolDef.QUEUEBALL_MAXSPEED * cuePower);
+
+            Vect firstVelocity = Vect.vec_scale(dir, -queueBallSpeed * cuePower);
+            Vect secondVeloctiy = BallPhysic.simul_ball_ball_velocity(balls.ball[0].m, firstBallPos, firstVelocity, balls.ball[secondBallIndex],
+                                                                        ref firstBallDir, ref secondBallDir);
+
+            secondVeloctiy = Vect.vec_unit(secondVeloctiy);
+            secondBallDir = secondVeloctiy;
+
+            return secondVeloctiy;
+        }
+
+        public void SimulationBalls(double cue_strength, double cue_speed, int statAim, int charStatAim, bool kissShow, int extra_aim_count)
+        {
+            if (!(gameType == PhysicGameType.GAME_4BALL || gameType == PhysicGameType.GAME_3CUSHION))
+                return;
+
+            if (is_simulation)
+                return;
+
+            simul_cue_strength = cue_strength;
+            simul_cue_speed = cue_speed;
+            simul_stat_aim = statAim;
+            simul_char_stat_aim = charStatAim;
+            simul_kiss_show = kissShow;
+            simul_stat_extra_aim_count = extra_aim_count;
+
+            if (simul_balls == null)
+            {
+                simul_balls = new BallsType();
+                simul_balls.nr = balls.nr;
+                simul_balls.gametype = balls.gametype;
+
+                simul_balls.ball = new BallType[simul_balls.nr];
+                for (int i = 0; i < simul_balls.nr; i++)
+                    simul_balls.ball[i] = new BallType();
+            }
+
+            simul_active_count = 0;
+            simul_extra_active_count = 0;
+            simul_wall_colli_count = 0;
+            proceed_tick_num = 0;
+
+            BallPhysic.reset_first_collision_ball_id();
+            BallPhysic.reset_queball_first_wall_collision();
+            BallPhysic.clear_3chushion_event();
+            BallPhysic.simulation_mode(true, kissShow);
+
+            for (int i = 0; i < simul_balls.nr; i++)
+            {
+                simul_balls.ball[i].Copy(balls.ball[i]);
+            }
+
+            for (int i = 0; i < simul_balls.nr; i++)
+            {
+                simul_balls.ball[i].ballcollicnt = 0;
+                simul_balls.ball[i].wallcnt = 0;
+                simul_balls.ball[i].final_wall_id = -1;
+                simul_balls.ball[i].final_wall_deltatime = 0.0f;
+            }
+
+            double queue_point_x = queue_spin_x;
+            double queue_point_y = queue_spin_y;
+
+            double dir_x = Math.Sin((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_y = Math.Cos((Zque * VMath.M_PI / 180.0f)) * Math.Sin((Xque * VMath.M_PI / 180.0f));
+            double dir_z = Math.Cos((Xque * VMath.M_PI / 180.0f));
+
+            Vect dir = new Vect(dir_x, dir_y, dir_z);
+            Vect nx = Vect.vec_unit(Vect.vec_cross(Vect.vec_ez, dir));  /* parallel to table */
+            Vect ny = Vect.vec_unit(Vect.vec_cross(nx, dir));        /* orthogonal to dir and nx */
+            Vect hitpoint = Vect.vec_add(Vect.vec_scale(nx, queue_point_x), Vect.vec_scale(ny, queue_point_y));
+            Vect nospinx_hitpoint = Vect.vec_add(Vect.vec_scale(nx, 0.0f), Vect.vec_scale(ny, queue_point_y));
+
+            simul_balls.ball[cueBallIndex].v = Vect.vec_scale(dir, -cue_speed * cue_strength);
+#if options_jump_shots
+#else
+            simul_balls.ball[cueBallIndex].v.z = 0.0f;
+#endif
+
+            simul_balls.ball[cueBallIndex].w = Vect.vec_null;
+            simul_balls.ball[cueBallIndex].w2 = Vect.vec_null;
+
+            if (Vect.vec_abssq(hitpoint) == 0.0f)
+            {
+                simul_balls.ball[cueBallIndex].w = Vect.vec_null;
+                simul_balls.ball[cueBallIndex].w2 = Vect.vec_null;
+            }
+            else
+            {
+                double turning_queue_strength = cue_strength + 0.2f;
+                if (turning_queue_strength > 1.0f)
+                    turning_queue_strength = 1.0f;
+
+                double final_spin_strength = 2.0f * cue_speed * turning_queue_strength / simul_balls.ball[0].d / simul_balls.ball[0].d;
+                if (isMasseMode())
+                {
+                    final_spin_strength = final_spin_strength * PAM.Instant.GetMasseSpinWeight();
+                }
+
+                simul_balls.ball[cueBallIndex].w = Vect.vec_scale(Vect.vec_cross(dir, hitpoint), final_spin_strength);
+                simul_balls.ball[cueBallIndex].w2 = Vect.vec_scale(Vect.vec_cross(dir, nospinx_hitpoint), final_spin_strength);
+            }
+
+            bool isTnl = AGGameManager.Instant.isTNL();
+
+            BallPhysic.set_cutshot_value(cutshot_value);
+            BallPhysic.set_whiteball_fcv(whiteBallFCV);
+            BallPhysic.add_init_ball_event(simul_balls.ball[cueBallIndex], queue_spin_x, queue_spin_y);
+
+            SetWhiteBallFCV(Vect.vec_null);
+
+            if (isTnl == false) 
+            {
+                is_simulation = true;
+                FixedUpdateSU();
+            }
+        }
+
+        public void SimulationBallsFromSaveData()
+        {
+            is_simulation = false;
+            SimulationBalls(simul_cue_strength, simul_cue_speed, simul_stat_aim, simul_char_stat_aim, simul_kiss_show, simul_stat_extra_aim_count);
+        }
+
+        public void ResetSimulation()
+        {
+            is_simulation = false;
+        }
+
+        public void SetCueBallIndex(int index)
+        {
+            cueBallIndex = 0;
+
+            if (gameType == PhysicGameType.GAME_3CUSHION || gameType == PhysicGameType.GAME_4BALL)
+            {
+                if (index > 1)
+                    return;
+
+                cueBallIndex = index;
+            }
+
+            BallPhysic.set_cueball_index(cueBallIndex);
+        }
+
+        public void SetCuePower(double power)
+        {
+            queue_strength = power;
+        }
+
+        // 물리에서 사용하는 값
+        public void SetSpinValue(double shotspin_x, double shotspin_y)
+        {
+            SetSpinStrength(shotspin_x, shotspin_y);
+
+            // 우측 상단에 보이는 볼의 스핀 위치 세팅
+            if (BallSpinButtonUI.Instant != null)
+            {
+                BallSpinButtonUI.Instant.SetSpin(shotspin_x, shotspin_y);
+            }
+        }
+
+        // 물리에서 사용할 스핀 세팅
+        public void SetSpinStrength(double spin_x, double spin_y)
+        {
+            queue_spin_x = spin_x;
+            queue_spin_y = spin_y;
+            is_simulation = false;
+        }
+
+        public void SetSpinUIValue(double spin_ui_x, double spin_ui_y)
+        {
+            queue_spin_ui_x = spin_ui_x;
+            queue_spin_ui_y = spin_ui_y;
+        }
+
+        public void SetCutShotValue(double value)
+        {
+            cutshot_value = value;
+        }
+
+        public void SetWhiteBallFCV(Vect fcv)
+        {
+            whiteBallFCV = fcv;
+        }
+
+        public void CueAngle(double angle)
+        {
+            Zque = angle;
+            is_simulation = false;
+        }
+
+        public void CueMasseAngle(double angle)
+        {
+            Xque = angle;
+        }
+
+        public int GetCueBallIndex()
+        {
+            return cueBallIndex;
+        }
+
+        public void SetCueBallPos(double x, double y)
+        {
+            BallType cueBall = GetCueBall();
+            cueBall.r.x = x;
+            cueBall.r.y = y;
+        }
+
+        public Vect GetCueBallPos()
+        {
+            return balls.ball[cueBallIndex].r;
+        }
+
+        public BallType GetCueBall()
+        {
+            return balls.ball[cueBallIndex];
+        }
+
+        public double GetCurrentCueAngle()
+        {
+            return Zque;
+        }
+
+        public double GetCurrentCueMasseAngle()
+        {
+            return Xque;
+        }
+
+        public double GetCurrentCueSpinX()
+        {
+            return queue_spin_x;
+        }
+
+        public double GetCurrentCueSpinY()
+        {
+            return queue_spin_y;
+        }
+
+        public double GetCurrentCueSpinUIX()
+        {
+            return queue_spin_ui_x;
+        }
+
+        public double GetCurrentCueSpinUIY()
+        {
+            return queue_spin_ui_y;
+        }
+
+        public double GetCurrentCuePower()
+        {
+            return queue_strength;
+        }
+
+        public double GetCurrentCutShotValue()
+        {
+            return cutshot_value;
+        }
+
+        public Vect GetCurrentWhiteBallFCV()
+        {
+            return whiteBallFCV;
+        }
+
+        public void InitCueBallBreakCenter()
+        {
+            balls.ball[0].r = GetInitCueBallBreakCenter();
+            balls.ball[0].v = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].w = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].w2 = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].in_game = true;
+            balls.ball[0].in_hole = 0;
+            balls.ball[0].in_hole_store = 0;
+            balls.ball[0].in_outlet = 0;
+
+            SetWhiteBallFCV(Vect.vec_null);
+        }
+
+        public void InitCueBallCenter()
+        {
+            balls.ball[0].r = GetInitCueBallCenter();
+            balls.ball[0].v = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].w = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].w2 = new Vect(0.0f, 0.0f, 0.0f);
+            balls.ball[0].in_game = true;
+            balls.ball[0].in_hole = 0;
+            balls.ball[0].in_hole_store = 0;
+            balls.ball[0].in_outlet = 0;
+
+            SetWhiteBallFCV(Vect.vec_null);
+        }
+
+        public Vect GetInitCueBallCenter()
+        {
+            return new Vect(0.0f, 0.0f, 0.0f);
+        }
+
+        public Vect GetInitCueBallBreakCenter()
+        {
+            return new Vect(BallPoolDef.QUEUE_BALL_INIT_X, BallPoolDef.QUEUE_BALL_INIT_Y, 0.0f);
+        }
+
+        public VRect GetBreakBallArea(double subtract_inside)
+        {
+            VRect sub_rect = breakBallArea;
+
+            sub_rect.left += subtract_inside;
+            sub_rect.right -= subtract_inside;
+            sub_rect.bottom += subtract_inside;
+
+            return sub_rect;
+        }
+
+        public VRect GetFreeBallArea(double subtract_inside)
+        {
+            VRect sub_rect = freeBallArea;
+
+            sub_rect.left += subtract_inside;
+            sub_rect.right -= subtract_inside;
+            sub_rect.top -= subtract_inside;
+            sub_rect.bottom += subtract_inside;
+
+            return sub_rect;
+        }
+
+        public BallsType GetBallsType()
+        {
+            return balls;
+        }
+
+        public BallType GetBall(int index)
+        {
+            if (index >= 0 && index < balls.nr)
+                return balls.ball[index];
+            else
+                return null;
+        }
+
+        public int GetBallCount()
+        {
+            return balls.nr;
+        }
+
+        public BordersType GetBordesType()
+        {
+            return walls;
+        }
+
+        public bool isBallInHole(int index)
+        {
+            if (balls.ball[index].in_game == false || balls.ball[index].in_hole != 0)
+                return true;
+
+            return false;
+        }
+
+        public bool isShotFinish()
+        {
+            for (int i = 0; i < balls.ball.Length; i++)
+            {
+                if (balls.ball[i].in_game == true)
+                {
+                    if (balls.ball[i].v.x != 0.0f || balls.ball[i].v.y != 0.0f || balls.ball[i].v.z != 0.0f)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public double GetAccelRotation()
+        {
+            double angle;
+            Vector2 input = new Vector2(Input.acceleration.x, Input.acceleration.y);
+            if (input.normalized.x == 0 && input.normalized.y == 0)
+                angle = -90;
+            else
+                angle = Mathf.Rad2Deg * Math.Atan2(input.normalized.y, input.normalized.x);
+            //Debug.Log(string.Format("accel {0}, {1}, angle {2}", Input.acceleration.x, Input.acceleration.y, angle));
+            return angle;
+        }
+
+        public List<SimulBallData> GetSimulDataList()
+        {
+            return simulDataList;
+        }
+
+        public int GetSimulActiveCount()
+        {
+            return simul_active_count;
+        }
+
+        public int GetSimulExtraActiveCount()
+        {
+            return simul_extra_active_count;
+        }
+                
+        public bool isMasseMode()
+        {
+            if (GetCurrentCueMasseAngle() > BallPoolDef.INIT_MASSE_VALUE)
+                return true;
+
+            return false;
+        }
+
+        public void ValidAreaCheck()
+        {
+            if (PAM.Instant.isBallDieValidCheck() == false)
+                return;
+
+            float adjust_x = 0.0f;
+
+            for (int i = 0; i < balls.nr; i++)
+            {
+                if (balls.ball[i].in_game == false)
+                    continue;
+
+                if (balls.ball[i].r.x < validBallArea.left || balls.ball[i].r.x > validBallArea.right ||
+                    balls.ball[i].r.y > validBallArea.top || balls.ball[i].r.y < validBallArea.bottom)
+                {
+                    balls.ball[i].r.x = adjust_x;
+                    balls.ball[i].r.y = 0.0f;
+
+                    adjust_x += 0.001f;
+                }
+            }
+        }
+
+        public void FillCircleX(ref Mesh m, bool extraAim)
+        {
+            if (extraAim)
+            {
+                m.vertices = xCirP.ext_vert;
+                m.uv = xCirP.ext_uv;
+                m.triangles = xCirP.ext_tri;                
+            }
+            else
+            {
+                m.vertices = xCirP.vert;
+                m.uv = xCirP.uv;
+                m.triangles = xCirP.tri;
+            }
+        }
+
+        #endregion
+    }
+}
