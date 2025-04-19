@@ -1,0 +1,1247 @@
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+
+
+namespace XGuard
+{
+
+    public partial class BallPoolMatch
+    {
+        bool matchUserGameOut = false;
+        MatchType currMacthType = MatchType.Exercise;
+        MatchState matchState = MatchState.Init;
+        NetMatchSyncStep currNetSyncStep = NetMatchSyncStep.None;
+
+        bool isNeedRejoinProc = false;
+        Player[] players = new Player[2];
+
+        bool breakingStep = true;
+
+        bool breakCueBall = true;
+        bool freeCueBall = false;
+
+        long currTurnSerialID = 0;
+
+        List<int> tableBalls = new List<int>();
+        List<int> holeInBalls = new List<int>();
+        List<int> sendHoleInBalls = new List<int>();
+
+        // shot result send packet data...
+        int first_collision_ball_id = 0;
+        List<NetCushionData> cushionDataList = new List<NetCushionData>();
+        List<NetHoleInData> holeInDataList = new List<NetHoleInData>();
+        List<Vect> tablePosList = new List<Vect>();
+        List<Vect> tableRotList = new List<Vect>();
+
+        // shot result recv packet data
+        List<int> recvBallInfo = new List<int>();
+        List<Vect> recvPosInfo = new List<Vect>();
+        List<Vect> recvRotInfo = new List<Vect>();
+
+        public ExerciseBall8Match exerciseMatch = null;
+        public VideoReplay videoReplay = null;
+        BS_GAMETABLE tableGame = null;
+
+        ElapsedTimer stateTimer = new ElapsedTimer();
+
+        static BallPoolMatch _Instant = null;
+
+        //----------------------------------------------------------------------------------
+        // Attribute Function.
+        #region( Attribute Function. )
+
+        public static BallPoolMatch Instant
+        {
+            get { return _Instant; }
+        }
+
+        public MatchType CurrMatchType
+        {
+            get { return currMacthType; }
+        }
+
+        public bool isBreakingStep
+        {
+            get { return breakingStep; }
+        }
+
+        public bool isBreakCueBall
+        {
+            get { return breakCueBall; }
+        }
+
+        public bool isFreeCueBall
+        {
+            get { return freeCueBall; }
+        }
+
+        public NetMatchSyncStep CurrNetMatchSyncStep
+        {
+            get { return currNetSyncStep; }
+        }
+
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Private Function.
+        #region ( Private Function)
+
+        void SetPlayerUIData()
+        {
+            PlayerUI playerUI1 = InGameUI.Instant.GetPlayerUIComponent(0);
+            PlayerUI playerUI2 = InGameUI.Instant.GetPlayerUIComponent(1);
+
+            playerUI1.ownerPlayer = players[0];
+            playerUI2.ownerPlayer = players[1];
+
+            playerUI1.SetUserData();
+            playerUI2.SetUserData();
+
+            // cue texture를 reset하고 다시 loading 한다.
+            CueController.Instant.ResetCueTexture();
+            CueMasseUI.Instant.ChangeCue();
+        }
+
+        void HoleInCheck(float fElapsed)
+        {
+            BallsType ballsType = GameManager.Instant.GetBallsType();
+            for (int i = 0; i < ballsType.ball.Length; i++)
+            {
+                if (ballsType.ball[i].in_game == false)
+                {
+                    if (holeInBalls.Contains(i) == false)
+                    {
+                        if (i == 0)
+                        {
+                            JukeBox.Instant.Play("FOUL", false);
+                        }
+
+                        if (i == 8)
+                        {
+                            Player currPlayer = GetCurrTurnPlayer();
+                            if (currPlayer.Have8Ball == false)
+                                JukeBox.Instant.Play("FOUL", false);
+                        }
+
+                        holeInBalls.Add(i);
+                        tableBalls.Remove(i);
+                        AGGameManager.Instant.HoleInBall(i);
+
+                        sendHoleInBalls.Add(i);
+
+                        if (exerciseMatch != null)
+                        {
+                            exerciseMatch.HoleInBall(BallPhysic.first_collision_ball_id(), i);
+                        }
+
+                        // 흰공 혹은 검은 공이 아니면...
+                        if (!(i == 0 || i == 8))
+                        {
+                            if (breakingStep == false)
+                            {
+                                PlayBallType type = ConvertPlayBallType(i);
+                                if (players[0].CurrPlayBallType == type)
+                                    players[0].RemoveBall(i);
+                                else
+                                    players[1].RemoveBall(i);
+                            }
+                        }
+                        else
+                        {
+                            // 8볼이면...
+                            if (i == 8)
+                            {
+                                if (breakingStep == false)
+                                {
+                                    if (players[0].serialID == currTurnSerialID)
+                                        players[0].Remove8Ball();
+                                    else
+                                        players[1].Remove8Ball();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public int ConvertFooHoleIdToGame(int fooHoleIn)
+        {
+            int[] convertArray = { 4, 1, 5, 2, 0, 3 };
+            fooHoleIn = fooHoleIn - 1;
+            return convertArray[fooHoleIn];
+        }
+
+        void ShotFinishCheck(float fElapsed)
+        {
+            stateTimer.UpdateFrame(fElapsed);
+            if (stateTimer.isFinish())
+            {
+                if (GameManager.Instant.isShotFinish())
+                {
+                    // cushion data setting.                
+                    cushionDataList.Clear();
+                    BallsType balls = GameManager.Instant.GetBallsType();
+                    for (int i = 1; i < balls.nr; i++)
+                    {
+                        if (balls.ball[i].wallcnt > 0)
+                        {
+                            NetCushionData cushionData = new NetCushionData();
+                            cushionData.ballId = i;
+                            cushionDataList.Add(cushionData);
+                        }
+                    }
+
+                    // cue ball은 벽에 먼저 맞았을 경우에만 해당된다.
+                    if (BallPhysic.is_queball_first_wall_collision())
+                    {
+                        NetCushionData cushionData = new NetCushionData();
+                        cushionData.ballId = 0;
+                        cushionDataList.Add(cushionData);
+                    }
+
+                    // 서버로 데이터 전송.
+                    // hole data setting.
+                    holeInDataList.Clear();
+                    for (int i = 0; i < sendHoleInBalls.Count; i++)
+                    {
+                        NetHoleInData holeInData = new NetHoleInData();
+                        holeInData.holeInBallId = sendHoleInBalls[i];
+                        BallType holeInBallType = GameManager.Instant.GetBall(holeInData.holeInBallId);
+                        holeInData.holdId = ConvertFooHoleIdToGame(holeInBallType.in_hole_store);
+                        holeInDataList.Add(holeInData);
+                    }
+
+                    // table data                
+                    tablePosList.Clear();
+                    for (int i = 0; i < balls.nr; i++)
+                    {
+                        if (balls.ball[i].in_game == true)
+                        {
+                            Vect newTableDataItem = new Vect(balls.ball[i].r.x, balls.ball[i].r.y, (double)i);
+                            tablePosList.Add(newTableDataItem);
+                        }
+                        else
+                        {
+                            if (i == 0)
+                            {
+                                Vect fooCueBallCenter = GameManager.Instant.GetInitCueBallCenter();
+                                Vect newTableDataItem = new Vect(fooCueBallCenter.x, fooCueBallCenter.y, (double)i);
+                                tablePosList.Add(newTableDataItem);
+                            }
+                        }
+                    }
+
+                    // 회전 정보...                
+                    tableRotList.Clear();
+                    for (int i = 0; i < balls.nr; i++)
+                    {
+                        if (balls.ball[i].in_game == true)
+                        {
+                            for (int j = 0; j < 3; j++)
+                            {
+                                Vect newTableDataItem = new Vect(balls.ball[i].b[j].x, balls.ball[i].b[j].y, balls.ball[i].b[j].z);
+                                tableRotList.Add(newTableDataItem);
+                            }
+                        }
+                        else
+                        {
+                            if (i != 0) continue;
+                            for (int j = 0; j < 3; j++)
+                            {
+                                Vect newTableDataItem = new Vect(0.0f, 0.0f, 0.0f);
+                                tableRotList.Add(newTableDataItem);
+                            }
+                        }
+                    }
+
+                    first_collision_ball_id = BallPhysic.first_collision_ball_id();
+
+                    // 혼자하기로 데이터 전송.
+                    if (exerciseMatch != null)
+                        exerciseMatch.TurnEnd(sendHoleInBalls, first_collision_ball_id, cushionDataList);
+                    else
+                        NetworkSession.Instant.On_rq_pvp_shot_result_b(first_collision_ball_id, holeInDataList, cushionDataList, tablePosList, tableRotList);
+
+                    // GameManager.Instant.ValidAreaCheck();
+
+                    if (MatchHelper.isVideoReplay())
+                    {
+                        videoReplay.SendShotResult();
+                    }
+
+                    ChangeMatchState(MatchState.ShotResultWait);
+                }
+            }
+        }
+
+
+
+        void CallPocketCueControlTurnOn()
+        {
+            if (isMyTurn())
+            {
+                CuePowerUI.Instant.TurnOn();
+                BallSpinButtonUI.Instant.TurnOn();
+            }
+
+            CueController.Instant.TurnOn();
+        }
+
+        void CueControlTurnOff()
+        {
+            CuePowerUI.Instant.TurnOff();
+            BallSpinButtonUI.Instant.TurnOff();
+            CueController.Instant.TurnOff();
+        }
+
+        void TurnNotifyText(long serialID, bool breakCueBall, bool freeCueBall, float turnTime)
+        {
+            // cushion data setting.
+            int cushionBallCount = 0;
+            BallsType balls = GameManager.Instant.GetBallsType();
+            for (int i = 1; i < balls.nr; i++)
+            {
+                if (balls.ball[i].wallcnt > 0)
+                    cushionBallCount++;
+            }
+
+            if (breakCueBall)
+            {
+                NotifyDisplayUI.Instant.PlayNotifyText(NotifyDisplayUI.PlayNotifyType.CueBreakBall);
+            }
+            else
+            {
+                if (isMyTurn())
+                {
+                    if (freeCueBall)
+                    {
+                        if (holeInBalls.Contains(0))
+                            NotifyDisplayUI.Instant.PlayNotifyText(NotifyDisplayUI.PlayNotifyType.CueBallPocket);
+                        else if (BallPhysic.first_collision_ball_id() < 0)
+                            NotifyDisplayUI.Instant.PlayNotifyText(NotifyDisplayUI.PlayNotifyType.CueBallNotHit);
+
+                        NotifyDisplayUI.Instant.PlayNotifyText(NotifyDisplayUI.PlayNotifyType.FreeBall);
+                    }
+                    else
+                    {
+                        NotifyDisplayUI.Instant.PlayNotifyText(NotifyDisplayUI.PlayNotifyType.Turn);
+                    }
+                }
+            }
+        }
+
+        bool isCallTurn()
+        {
+            if (exerciseMatch != null)
+                return false;
+
+            if (tableGame == null)
+                return false;
+
+            if (tableGame.game_RoomRule1 == BS_DATA.EGAME_ROOM_RULE1._3CUSHION_STANDARD ||
+                tableGame.game_RoomRule1 == BS_DATA.EGAME_ROOM_RULE1._8BALL_STANDARD)
+                return false;
+
+            if (tableGame.game_RoomRule1 == BS_DATA.EGAME_ROOM_RULE1._8BALL_CALL)
+            {
+                Player currPlayer = GetCurrTurnPlayer();
+                if (isBreakCueBall == true || currPlayer.HaveBalls.Count > 0 ||
+                    currPlayer.CurrPlayBallType == PlayBallType.None || currPlayer.Have8Ball == false)
+                {
+                    return false;
+                }
+            }
+
+            /*
+
+            if (tableGame.game_RoomRule1 == BS_DATA.EGAME_ROOM_RULE1._8BALL_ALLCALL)
+            {
+                Player currPlayer = GetCurrTurnPlayer();
+                if (isBreakCueBall == true || currPlayer.CurrPlayBallType == PlayBallType.None )
+                {
+                    return false;
+                }
+            }
+             * */
+
+            return true;
+        }
+
+        private void ProcEnter(MatchType matchType)
+        {
+            this.currMacthType = matchType;
+
+            if (MatchHelper.isVideoReplay() == false)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    players[i] = new Player();
+                    players[i].arrayIndex = i;
+                }
+
+                for (int i = 0; i <= 15; i++)
+                {
+                    tableBalls.Add(i);
+                }
+
+                if (isExerciseMatch())
+                {
+                    ProfileAccount account = NetData.Instant.AccountProfile.account;
+                    players[0].grade = UIDefine.LeagueStartIndex + 1;
+                    players[1].grade = UIDefine.LeagueStartIndex + 1;
+
+                    exerciseMatch = new ExerciseBall8Match();
+                    exerciseMatch.OnEnter(this);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    players[i] = new Player();
+                    players[i].arrayIndex = i;
+                }
+
+                videoReplay = new VideoReplay();
+                videoReplay.On8BallEnter(this);
+            }
+
+            if (Document.Verify())
+            {
+                tableGame = Document.Instant.Table.FindData<BS_GAMETABLE>(GlobalGameData.Instant.CurrentRoomIndex);
+            }
+
+
+            JukeBox.Instant.Play("RACK", false);
+            JukeBox.Instant.Play("GAME_START", false, 0.9f);
+        }
+
+        private void ProcEnterRejoin()
+        {
+            // player setting...
+            Player me = this.GetPlayer(0);
+            Player other = this.GetPlayer(1);
+
+            MatchPlayerInfo matchPlayer1 = NetData.Instant.MatchPlayer1;
+            MatchPlayerInfo matchPlayer2 = NetData.Instant.MatchPlayer2;
+            
+            // ProfileAccount account = NetData.Instant.AccountProfile.account;
+
+            me.serialID = matchPlayer1.serialID;
+            me.nickName = matchPlayer1.nickName;
+            me.grade = matchPlayer1.grade;
+            me.lv = matchPlayer1.lv;
+            me.userProfile = matchPlayer1.profileURL;
+
+            // MatchPlayerInfo matchPlayer = NetData.Instant.MatchPlayer2;
+
+            other.serialID = matchPlayer2.serialID;
+            other.nickName = matchPlayer2.nickName;
+            other.grade = matchPlayer2.grade;
+            other.lv = matchPlayer2.lv;
+            other.userProfile = matchPlayer2.profileURL;
+
+            MatchRejoinInfo rejoinInfo = NetData.Instant.MatchRejoin;
+
+            // match state 
+            // (bitmap)1:break, 2: openTable, 4: freeBall
+            breakCueBall = ((rejoinInfo.matchState & (1 << 0)) != 0) ? true : false;
+            freeCueBall = ((rejoinInfo.matchState & (1 << 3)) != 0) ? true : false;
+            switch (rejoinInfo.matchState)
+            {
+                case 0:
+                    breakCueBall = false;
+                    break;
+                case 1:
+                    breakCueBall = true;
+                    break;
+                case 2:
+                    breakCueBall = false;
+                    break;
+            }
+
+            holeInBalls.Clear();
+
+            recvPosInfo = BallMathConverter.ConvertByteListToVectList(rejoinInfo.tableBytePosInfo);
+            recvRotInfo = BallMathConverter.ConvertByteListToVectList(rejoinInfo.tableByteRotInfo);
+
+            if (recvPosInfo != null && recvPosInfo.Count > 0)
+            {
+                tableBalls.Clear();
+            }
+
+            if (recvPosInfo != null)
+            {
+                for (int i = 0; i < recvPosInfo.Count; i++)
+                {
+                    int balIId = (int)recvPosInfo[i].z;
+                    tableBalls.Add(balIId);
+                }
+            }
+
+            for (int i = 0; i < 16; i++)
+            {
+                if (tableBalls.Contains(i))
+                    continue;
+
+                holeInBalls.Add(i);
+                AGGameManager.Instant.ShowHoleInBall(i);
+            }
+
+            // 공좌표 setting.
+            if (recvPosInfo != null && recvPosInfo.Count > 0)
+            {
+                BallsType balls = GameManager.Instant.GetBallsType();
+                for (int i = 0; i < 16; i++)
+                {
+                    balls.ball[i].in_game = false;
+                }
+
+                for (int i = 0; i < recvPosInfo.Count; i++)
+                {
+                    int balIId = (int)recvPosInfo[i].z;
+                    balls.ball[balIId].r = new Vect(recvPosInfo[i].x, recvPosInfo[i].y, 0.0f);
+                    balls.ball[balIId].in_game = true;
+                }
+
+                // 옆으로 구르는 연출 공 세팅.
+                int holeInCount = 0;
+                for (int i = 1; i < 16; i++)
+                {
+                    if (balls.ball[i].in_game == false)
+                    {
+                        BallPhysic.force_position_holein_outlet(balls.ball[i], holeInCount);
+                        holeInCount++;
+                    }
+                }
+
+                // cue ball로 움직인 위치가 있으면...
+                if (rejoinInfo.cueBallBytePos != null && rejoinInfo.cueBallBytePos.Count > 0)
+                {
+                    Vector2 rejoinCueBallPos = BallMathConverter.ConvertByteListToVector2(rejoinInfo.cueBallBytePos);
+                    {
+                        balls.ball[0].r = new Vect(rejoinCueBallPos.x, rejoinCueBallPos.y, 0.0f);
+                    }
+                }
+
+                for (int i = 0; i < recvRotInfo.Count; i++)
+                {
+                    int ballIdIndex = i / 3;
+                    int balIId = (int)recvPosInfo[ballIdIndex].z;
+                    int rotId = i % 3;
+
+                    balls.ball[balIId].b[rotId] = new Vect(recvRotInfo[i].x, recvRotInfo[i].y, recvRotInfo[i].z);
+                }
+            }
+
+            // open state 상태가 지났으면.
+            // (bitmap)1:break, 2: openTable, 4: freeBall
+            bool isOpenTable = ((rejoinInfo.matchState & (1 << 1)) != 0) ? true : false;
+            if (breakCueBall == false && isOpenTable == false)
+            {
+                // my ball
+                // 0 : 솔리드 , 1 : 스프라이트
+                PlayBallType playBallType = PlayBallType.SolidBall;
+                if (rejoinInfo.myBall == 1)
+                    playBallType = PlayBallType.StripeBall;
+
+                BallPoolMatch.Instant.DecideBallGroup(NetData.Instant.AccountProfile.account.serialID, playBallType);
+            }
+
+            // turn player / turn time...
+            currTurnSerialID = rejoinInfo.turnPlayer;
+            if (players[0].serialID == rejoinInfo.turnPlayer)
+            {
+                players[0].SetPlayTurn(PlayTurn.TurnOn);
+                players[1].SetPlayTurn(PlayTurn.TurnOff);
+            }
+            else
+            {
+                players[1].SetPlayTurn(PlayTurn.TurnOn);
+                players[0].SetPlayTurn(PlayTurn.TurnOff);
+            }
+            Player currPlayer = GetCurrTurnPlayer();
+            currPlayer.SetPlayTurnTime((float)rejoinInfo.turnTime / 1000.0f);
+            currPlayer.SetPlayRemainTime((float)rejoinInfo.remainTime / 1000.0f);
+
+            // cue control
+            if (BallSpinUI.Instant != null)
+            {
+                BallSpinUI.Instant.Reset();
+            }
+            BallSpinButtonUI.Instant.Reset();
+
+            if (breakCueBall == false && isCallTurn())
+            {
+                CueControlTurnOff();
+                RuleCallMarkUI.Instant.TurnOn();
+            }
+            else
+            {
+                CueControlTurnOn();
+                RuleCallMarkUI.Instant.TurnOff();
+            }
+
+
+            // pocket state
+            int pocketState = rejoinInfo.pocketState >> 16;
+            if ((pocketState & 0x3f) > 0)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    if ((pocketState & (1 << i)) > 0)
+                    {
+                        NetCallPocketSelect(i);
+                        break;
+                    }
+                }
+            }
+
+            // player data UI setting...
+            SetPlayerUIData();
+
+            ChangeMatchState(MatchState.ShotWait);
+        }
+
+        private void ProcMatchKeepRejoin()
+        {
+            /*
+            // player setting...
+            MatchRejoinInfo rejoinInfo = NetData.Instant.MatchRejoin;
+
+            // match state 
+            // (bitmap)1:break, 2: openTable, 4: freeBall
+            breakCueBall = ((rejoinInfo.matchState & (1 << 0)) != 0) ? true : false;
+            freeCueBall = ((rejoinInfo.matchState & (1 << 3)) != 0) ? true : false;
+            switch (rejoinInfo.matchState)
+            {
+                case 0:
+                    breakCueBall = false;
+                    break;
+                case 1:
+                    breakCueBall = true;
+                    break;
+                case 2:
+                    breakCueBall = false;
+                    break;
+            }
+
+            BallsType balls = GameManager.Instant.GetBallsType();
+            if (rejoinInfo.cueBallPos.z != 0.0f)
+            {
+                balls.ball[0].r = new Vect(rejoinInfo.cueBallPos.x, rejoinInfo.cueBallPos.y, 0.0f);
+            }
+
+            // turn player / turn time...
+            currTurnSerialID = rejoinInfo.turnPlayer;
+            if (players[0].serialID == rejoinInfo.turnPlayer)
+            {
+                players[0].SetPlayTurn(PlayTurn.TurnOn);
+                players[1].SetPlayTurn(PlayTurn.TurnOff);
+            }
+            else
+            {
+                players[1].SetPlayTurn(PlayTurn.TurnOn);
+                players[0].SetPlayTurn(PlayTurn.TurnOff);
+            }
+            Player currPlayer = GetCurrTurnPlayer();
+            currPlayer.SetPlayTurnTime((float)rejoinInfo.turnTime / 1000.0f);
+            currPlayer.SetPlayRemainTime((float)rejoinInfo.remainTime / 1000.0f);
+
+            // cue control
+            if (BallSpinUI.Instant != null)
+            {
+                BallSpinUI.Instant.Reset();
+            }
+            BallSpinButtonUI.Instant.Reset();
+
+            if (breakCueBall == false && isCallTurn())
+            {
+                CueControlTurnOff();
+                RuleCallMarkUI.Instant.TurnOn();
+            }
+            else
+            {
+                CueControlTurnOn();
+                RuleCallMarkUI.Instant.TurnOff();
+            }
+
+            // pocket state
+            int pocketState = rejoinInfo.pocketState >> 16;
+            if ((pocketState & 0x3f) > 0)
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    if ((pocketState & (1 << i)) > 0)
+                    {
+                        NetCallPocketSelect(i);
+                        break;
+                    }
+                }
+            }
+
+            ChangeMatchState(MatchState.ShotWait);
+             * */
+        }
+
+        void ApplyRecvShotResultTurnUserData()
+        {
+            if (recvPosInfo == null || recvRotInfo == null)
+                return;
+
+            List<int> ballIdLists = new List<int>();
+            BallsType balls = GameManager.Instant.GetBallsType();
+            for (int i = 0; i < balls.nr; i++)
+            {
+                ballIdLists.Add(i);
+            }
+
+            if (recvPosInfo != null)
+            {
+                for (int i = 0; i < recvPosInfo.Count; i++)
+                {
+                    int balIId = (int)recvPosInfo[i].z;
+
+                    // 공이 들어가 있으면...
+                    if (balls.ball[balIId].in_game == false && balIId != 0)
+                    {
+                        holeInBalls.Remove(balIId);
+                        tableBalls.Add(balIId);
+                        AGGameManager.Instant.ShowBall(balIId);
+                    }
+
+                    balls.ball[balIId].r = new Vect(recvPosInfo[i].x, recvPosInfo[i].y, 0.0f);
+                    balls.ball[balIId].in_game = true;
+                    balls.ball[balIId].in_hole = 0;
+                    balls.ball[balIId].in_hole_store = 0;
+                    balls.ball[balIId].in_outlet = 1;
+
+                    ballIdLists.Remove(balIId);
+                }
+            }
+
+            if (recvRotInfo != null)
+            {
+                for (int i = 0; i < recvRotInfo.Count; i++)
+                {
+                    int ballIdIndex = i / 3;
+                    int balIId = (int)recvPosInfo[ballIdIndex].z;
+                    int rotId = i % 3;
+
+                    balls.ball[balIId].b[rotId] = new Vect(recvRotInfo[i].x, recvRotInfo[i].y, recvRotInfo[i].z);
+                }
+            }
+
+            // hole in ball count.
+            int holeInCount = 0;
+            for (int i = 0; i < ballIdLists.Count; i++)
+            {
+                int balIId = ballIdLists[i];
+                if (balls.ball[balIId].in_game == false)
+                    holeInCount++;
+            }
+
+            // Hole In ball setting.
+            for (int i = 0; i < ballIdLists.Count; i++)
+            {
+                int balIId = ballIdLists[i];
+                if (balls.ball[balIId].in_game == true)
+                {
+                    BallPhysic.force_position_holein_outlet(balls.ball[balIId], holeInCount);
+
+                    holeInBalls.Add(balIId);
+                    tableBalls.Remove(balIId);
+                    AGGameManager.Instant.HoleInBall(balIId);
+
+                    // 흰공 혹은 8볼이 아니면...
+                    if (!(balIId == 0 || balIId == 8))
+                    {
+                        if (breakingStep == false)
+                        {
+                            PlayBallType type = ConvertPlayBallType(balIId);
+                            if (players[0].CurrPlayBallType == type)
+                                players[0].RemoveBall(balIId);
+                            else
+                                players[1].RemoveBall(balIId);
+                        }
+                    }
+                    else
+                    {
+                        // 8볼이면...
+                        if (i == 8)
+                        {
+                            if (breakingStep == false)
+                            {
+                                if (players[0].serialID == currTurnSerialID)
+                                    players[0].Remove8Ball();
+                                else
+                                    players[1].Remove8Ball();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
+        //----------------------------------------------------------------------------------
+        // Public Function.
+        #region ( Public Function)
+
+        public void OnEnter(MatchType matchType)
+        {
+            _Instant = this;
+
+            ProcEnter(matchType);
+        }
+
+        public void OnEnerRejoin(MatchType matchType)
+        {
+            this.OnEnter(matchType);
+
+            isNeedRejoinProc = true;
+        }
+
+        public void UpdateFrame(float fElapsed)
+        {
+            if (videoReplay != null)
+            {
+                videoReplay.UpdateFrame(fElapsed);
+            }
+
+            // 동영상 리플레이 혹은 싱글 미션 리플레이 중에는 필요없는 작업들
+            if (MatchHelper.isVideoReplay() == false)
+            {
+                if (isNeedRejoinProc)
+                {
+                    ProcEnterRejoin();
+                    isNeedRejoinProc = false;
+                }
+
+                foreach (Player p in players)
+                {
+                    p.UpdateFrame(fElapsed);
+                }
+
+                if (exerciseMatch != null)
+                    exerciseMatch.UpdateFrame(fElapsed);
+            }
+
+            ATCkManager.Instant.XGuardU(fElapsed);
+
+            switch (matchState)
+            {
+                case MatchState.TurnWait:
+                    break;
+                case MatchState.ShotWait:
+                    break;
+                case MatchState.Shot:
+                    // hole in check
+                    HoleInCheck(fElapsed);
+                    // 공이 모두 멈췄는지 체크.
+                    ShotFinishCheck(fElapsed);
+                    break;
+            }
+        }
+
+        public void OnExit()
+        {
+            _Instant = null;
+        }
+
+        public void MatchUerGameOut()
+        {
+            matchUserGameOut = true;
+        }
+
+        public void ChangeMatchState(MatchState state)
+        {
+            switch (state)
+            {
+                case MatchState.Start:
+                    {
+                        SetPlayerUIData();
+                        ChangeMatchState(MatchState.TurnWait);
+                    }
+                    break;
+                case MatchState.TurnWait:
+                    break;
+                case MatchState.ShotWait:
+                    GameManager.Instant.SetUpdatePause(true);
+                    break;
+                case MatchState.Shot:
+                    {
+                        // recv data clear...
+                        if (recvBallInfo != null) recvBallInfo.Clear();
+                        if (recvPosInfo != null) recvPosInfo.Clear();
+                        if (recvRotInfo != null) recvRotInfo.Clear();
+
+                        if (exerciseMatch != null)
+                            exerciseMatch.CueShot();
+
+                        GameManager.Instant.SetUpdatePause(false);
+                        stateTimer.StartTimer(0.5f);
+                        Player p = GetCurrTurnPlayer();
+                        p.SetPlayTurn(PlayTurn.TurnShot);
+
+                        CuePowerUI.Instant.TurnOff();
+                    }
+                    break;
+                case MatchState.ShotResultWait:
+                    {
+                        if (isExerciseMatch() == false || MatchHelper.isMissionStage() == false)
+                        {
+                            if (isMyTurn() == false && recvPosInfo != null && recvPosInfo.Count > 0)
+                            {
+                                ApplyRecvShotResultTurnUserData();
+                            }
+                        }
+                    }
+                    break;
+            }
+
+            matchState = state;
+        }
+
+        public MatchState GetMatchState()
+        {
+            return matchState;
+        }
+
+        public void DecideBallGroup(long serialID, PlayBallType type)
+        {
+            PlayBallType type2 = PlayBallType.SolidBall;
+            if (type == PlayBallType.SolidBall)
+                type2 = PlayBallType.StripeBall;
+
+            if (serialID == players[0].serialID)
+            {
+                players[0].SetPlayBallType(type, tableBalls);
+                players[1].SetPlayBallType(type2, tableBalls);
+            }
+            else
+            {
+                players[1].SetPlayBallType(type, tableBalls);
+                players[0].SetPlayBallType(type2, tableBalls);
+            }
+
+            breakingStep = false;
+        }
+
+        public void NextTurn(long serialID, bool breakCueBall, bool freeCueBall, float turnTime, int suddenDeath)
+        {
+            CueController.Instant.TurnFinish();
+
+            // 
+            bool turnNotifyDisplay = true;
+            if (currTurnSerialID == serialID)
+                turnNotifyDisplay = false;
+
+            // turn player setting.
+            currTurnSerialID = serialID;
+
+            // 메세지 출력.
+            if (turnNotifyDisplay)
+                TurnNotifyText(serialID, breakCueBall, freeCueBall, turnTime);
+
+            this.breakCueBall = breakCueBall;
+            this.freeCueBall = freeCueBall;
+
+            holeInBalls.Remove(0);
+            sendHoleInBalls.Clear();
+
+            if (players[0].serialID == serialID)
+            {
+                players[0].SetPlayTurn(PlayTurn.TurnOn);
+                players[1].SetPlayTurn(PlayTurn.TurnOff);
+                players[0].SetPlayTurnTime(turnTime);
+            }
+            else
+            {
+                players[1].SetPlayTurn(PlayTurn.TurnOn);
+                players[0].SetPlayTurn(PlayTurn.TurnOff);
+                players[1].SetPlayTurnTime(turnTime);
+            }
+
+            if (BallSpinUI.Instant != null)
+                BallSpinUI.Instant.Reset();
+
+            BallSpinButtonUI.Instant.Reset();
+
+            if (breakCueBall == false && isCallTurn())
+            {
+                CueControlTurnOff();
+                RuleCallMarkUI.Instant.TurnOn();
+            }
+            else
+            {
+                CueControlTurnOn();
+            }
+
+            if (breakCueBall)
+            {
+                GameManager.Instant.InitCueBallBreakCenter();
+            }
+            else
+            {
+                if (freeCueBall || GameManager.Instant.isBallInHole(0))
+                {
+                    if (GameManager.Instant.isBallInHole(0))
+                    {
+                        GameManager.Instant.InitCueBallCenter();
+                        CueController.Instant.HoleInFreeBallCollision();
+                    }
+
+                    AGGameManager.Instant.ShowBall(0);
+
+                    this.freeCueBall = true;
+                }
+            }
+
+            GameManager.Instant.SetSpinUIValue(0.0f, 0.0f);
+            GameManager.Instant.SetSpinStrength(0.0f, 0.0f);
+            GameManager.Instant.SetCutShotValue(BallPoolDef.INIT_CUTSHOT_VALUE);
+            GameManager.Instant.CueMasseAngle(BallPoolDef.INIT_MASSE_VALUE);
+
+            InGameUI.Instant.NextTurn();
+
+            ShotRecordManager.Instant.NextTurn();
+
+            ChangeMatchState(MatchState.ShotWait);
+
+            if (breakCueBall == false)
+            {
+                if (turnNotifyDisplay)
+                    JukeBox.Instant.Play("YOUR_TURN", false, 0.9f);
+            }
+        }
+
+        public void UXCallPocketSelect(int callId)
+        {
+            CallPocketCueControlTurnOn();
+
+            NetworkSession.Instant.On_rq_pvp_call_pocket(callId);
+        }
+
+        public void NetCallPocketSelect(int callId)
+        {
+            CallPocketCueControlTurnOn();
+        }
+
+        public void AssignVideoReplayData(long turnSerialID, bool breakingStep, bool breakCueBall)
+        {
+            currTurnSerialID = turnSerialID;
+            this.breakingStep = breakingStep;
+            this.breakCueBall = breakCueBall;
+        }
+
+        public void AssignVideoReplayTableSetting()
+        {
+            holeInBalls.Clear();
+            tableBalls.Clear();
+
+            BallsType balls = GameManager.Instant.GetBallsType();
+            for (int i = 0; i < balls.nr; i++)
+            {
+                if (balls.ball[i].in_game)
+                {
+                    tableBalls.Add(i);
+                }
+                else
+                {
+                    holeInBalls.Add(i);
+                    AGGameManager.Instant.ShowHoleInBall(i);
+                }
+            }
+        }
+
+        public void CueControlTurnOn(bool setBestCueAngle = true)
+        {
+            if (isMyTurn())
+            {
+                if (CuePowerUI.Instant != null)
+                    CuePowerUI.Instant.TurnOn();
+                if (BallSpinButtonUI.Instant != null)
+                    BallSpinButtonUI.Instant.TurnOn();
+            }
+            else
+            {
+                if (CuePowerUI.Instant != null)
+                    CuePowerUI.Instant.TurnOff();
+                if (BallSpinButtonUI.Instant != null)
+                    BallSpinButtonUI.Instant.TurnOff();
+            }
+
+            if (CueController.Instant != null)
+            {
+                CueController.Instant.TurnOn();
+                if (MatchHelper.isBreakCueBall() == false)
+                {
+                    if (setBestCueAngle)
+                    {
+                        double bestCueAngle = MatchHelper.GetBestCueAngle();
+                        CueController.Instant.SetRecommendedCueAngle(bestCueAngle);
+                    }
+                }
+            }
+        }
+
+        public Player GetPlayer(int index)
+        {
+            if (index >= 2)
+                return null;
+
+            return players[index];
+        }
+
+        public Player GetPlayerFromSerialID(long serialID)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                if (players[i].serialID == serialID)
+                    return players[i];
+            }
+
+            return null;
+        }
+
+        public Player GetPrevTurnPlayer()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                if (players[i].serialID != currTurnSerialID)
+                    return players[i];
+            }
+
+            return null;
+        }
+
+        public Player GetCurrTurnPlayer()
+        {
+            return GetPlayerFromSerialID(currTurnSerialID);
+        }
+
+        public long GetCurrTurnSerialID()
+        {
+            return currTurnSerialID;
+        }
+
+        public bool isExerciseMatch()
+        {
+            if (this.currMacthType == MatchType.Lobby || this.currMacthType == MatchType.Exercise || this.currMacthType == MatchType.MissionStage)
+                return true;
+
+            return false;
+        }
+
+        public bool isMyTurn()
+        {
+            if (isExerciseMatch())
+                return true;
+
+            if (currTurnSerialID == players[0].serialID)
+                return true;
+
+            return false;
+        }
+
+        public PlayBallType ConvertPlayBallType(int ball_id)
+        {
+            if (ball_id < 8)
+                return PlayBallType.SolidBall;
+            else
+                return PlayBallType.StripeBall;
+        }
+
+        public bool isExistHoleIn(PlayBallType type, int exclude_ball_id)
+        {
+            if (type == PlayBallType.SolidBall)
+            {
+                foreach (int ball_id in holeInBalls)
+                {
+                    if (ball_id < 8 && ball_id != exclude_ball_id)
+                        return true;
+                }
+            }
+            else
+            {
+                foreach (int ball_id in holeInBalls)
+                {
+                    if (ball_id > 8 && ball_id != exclude_ball_id)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool isNetReconnectPossible()
+        {
+            if (matchState == MatchState.Shot)
+                return false;
+
+            return true;
+        }
+
+        public void SetNetMatchSyncStep(NetMatchSyncStep syncStep)
+        {
+            currNetSyncStep = syncStep;
+        }
+
+        public void MatchKeepRejoin()
+        {
+            ProcMatchKeepRejoin();
+            // ProcEnterRejoin();
+        }
+
+        public void MatchKeepRejoinShotResult()
+        {
+            NetworkSession.Instant.On_rq_pvp_shot_result_b(first_collision_ball_id, holeInDataList, cushionDataList, tablePosList, tableRotList);
+        }
+
+        // exercise match에서 턴 되돌리기 (이전 샷 다시치기 기능)
+        public void RollbackExcersieMatchTurn()
+        {
+            exerciseMatch.RollbackTurn();
+        }
+
+        public void RecvTurnUserPosAndRotate(List<int> ballInfo, List<byte> posInfo, List<byte> rotInfo)
+        {
+            if (isExerciseMatch())
+                return;
+
+            if (isMyTurn())
+                return;
+
+            recvBallInfo = ballInfo;
+            recvPosInfo = BallMathConverter.ConvertByteListToVectList(posInfo);
+            recvRotInfo = BallMathConverter.ConvertByteListToVectList(rotInfo);
+
+            if (matchState != MatchState.TurnWait && matchState < MatchState.ShotResultWait)
+            {
+                return;
+            }
+
+            // 동기화 좌표 적용.
+            ApplyRecvShotResultTurnUserData();
+        }
+
+        //---------------------------------------------------------
+        // vedio replay
+
+        public VideoReplay GetVideoReplay()
+        {
+            return videoReplay;
+        }
+
+
+        #endregion
+    }
+
+    /// <summary>
+    /// //////////////////////////////////////////////////////////////////////////////////////////
+    /// // Network data 처리.
+    /// </summary>
+}
